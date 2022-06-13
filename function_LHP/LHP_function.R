@@ -22,8 +22,7 @@ growth_map <- function(G_spatial , lon, lat,clim_sc, pref_hab, years,pars,x_om_i
   library(scales)
   library(BBmisc)
   library(reshape2)
- # RFoptions(seed=0)   
-   
+ 
  # lon #longitutde
   #lat #latitude
   #clim_sc=c("rcp45") # climate scenario
@@ -37,10 +36,8 @@ growth_map <- function(G_spatial , lon, lat,clim_sc, pref_hab, years,pars,x_om_i
   #beta_scale= c(0.1)# scale parameter of the gamma distribution used to generate the growth transition matric 
   #binsize # bin size
   #sizes # size classes
-  
   #m_last = c(30,0.1) # last size increment : meam, sd
   #m_init = c(8,0.1) # initial size increment  : meam, sd
-  
   #scale_g <- 0.1 # scale of the RF
 
 
