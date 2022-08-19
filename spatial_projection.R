@@ -38,7 +38,7 @@ prop_rec     <-c(.25,.4,.25,.075,0.025)
 #==Binary vectors related to period that determine when life events happen
 #==July,Aug,Sept,Oct,Nov,Dec,Jan,Feb,Mar,Apr,May,Jun
 survey_time   <-rep(c(1,0,0,0,0,0,0,0,0,0,0,0),year_n)
-fish_time		  <-rep(c(0,0,0,0,0,0,0,1,0,0,0,0),year_n)
+fish_time		  <-rep(c(0,0,0,0,0,0,0,1,1,1,0,0),year_n)
 recruit_time	<-rep(c(0,0,0,0,0,0,0,0,0,1,0,0),year_n)
 move_time		  <-rep(c(1,1,1,1,1,1,1,1,1,1,1,1),year_n)
 molt_time  	  <-rbind(rep(c(0,0,0,0,0,0,0,0,0,1,0,0),year_n),rep(c(0,0,0,0,0,0,0,0,0,1,0,0),year_n)) # females first, males second
@@ -252,7 +252,7 @@ cost_travel<-10000
 cost_patch<-cost_travel*distance_map + cost_fish
 price<-1.5
 
-fishers<-2
+fishers<-4
 quota<-rep(10000000,year_n)
 
 #=============================================
@@ -587,13 +587,20 @@ tot_profit<-apply(profit_by_fisher,c(3),sum,na.rm=T)
 tot_imm<-apply(imm_N_at_Len,c(5),sum,na.rm=T)
 tot_mat<-apply(mat_N_at_Len,c(5),sum,na.rm=T)
 
-par(mfrow=c(4,1),mar=c(.1,.1,.1,.1),oma=c(4,4,1,1))
-plot(tot_imm,type='l',las=1,xaxt='n')
-lines(tot_mat,lty=2)
+par(mfrow=c(4,1),mar=c(.1,.1,.1,.1),oma=c(4,.1,1,1))
+plot(tot_imm[100:length(tot_imm)],type='l',las=1,xaxt='n',ylim=c(0,9000000000))
+lines(tot_mat[100:length(tot_imm)],lty=2)
 legend('topright',bty='n',lty=c(1,2),legend=c("Immature N","Mature N"))
-plot(tot_catch,xaxt='n',las=1)
+# plot(tot_catch,xaxt='n',las=1)
+# legend('right',bty='n',legend=c("Total catch"))
+# plot(tot_cost,xaxt='n',las=1)
+# legend('right',bty='n',legend=c("Total cost"))
+# plot(tot_profit,xaxt='n',las=1)
+# legend('right',bty='n',legend=c("Total profits"))
+plot(tot_catch[(tot_profit>0)],xaxt='n',las=1,type='b',pch=16,ylim=c(0,60000000))
 legend('right',bty='n',legend=c("Total catch"))
-plot(tot_cost,xaxt='n',las=1)
+plot(tot_cost[(tot_profit>0)],xaxt='n',las=1,type='b',pch=16)
 legend('right',bty='n',legend=c("Total cost"))
-plot(tot_profit,xaxt='n',las=1)
+plot(tot_profit[(tot_profit>0)],las=1,type='b',pch=16)
 legend('right',bty='n',legend=c("Total profits"))
+

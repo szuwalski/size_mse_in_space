@@ -25,7 +25,7 @@ lon		   <-seq(-179,-155,length.out=40)
 
 binsize  <-5
 sizes		 <-seq(27.5,132.5,binsize)
-year_n	 <-50
+year_n	 <-20
 year_step <-12
 proj_period	<-seq(1,year_step*year_n)
 sexN		 <-2
@@ -164,8 +164,8 @@ x_eps_init=0#0.05 # if additive effect, % of the mean of the intial growth incre
 beta_scale= c(0.3)# scale parameter of the gamma distribution used to generate the growth transition matric 
 binsize # bin size
 sizes # size classes
-m_last = c(15,0.1) # last size increment : meam, sd
-m_init = c(3,0.1) # initial size increment  : meam, sd
+m_last = c(25,0.1) # last size increment : meam, sd
+m_init = c(9,0.1) # initial size increment  : meam, sd
 scale_g <- 1.5 # scale of the RF
 
 # molt
@@ -498,6 +498,42 @@ for(t in 1:(length(proj_period)-1))
                                               beta_scale,binsize,sizes, m_last, m_init,scale_g) 
     }
     
+    if(terminal_molt==0)
+    { 
+    #==make size transition matrix mature
+    if(!G_spatial){
+      # female
+      size_transition_mat_f_mat_temp <- growth_trans(sizes,m_last[1],
+                                                     m_init[1],
+                                                     sizes[1],
+                                                     sizes[n_p],
+                                                     binsize,
+                                                     beta_scale)
+      
+      size_transition_mat_f_mat <- array(0, dim = c(length(lat),length(lon),n_p,n_p))
+      size_transition_mat_f_mat[,,1:n_p,1:n_p] <- size_transition_mat_f_mat_temp[1:n_p,1:n_p]
+      
+      # male
+      size_transition_mat_m_mat_temp <- growth_trans(sizes,m_last[1],
+                                                     m_init[1],
+                                                     sizes[1],
+                                                     sizes[n_p],
+                                                     binsize,
+                                                     beta_scale)
+      size_transition_mat_m_mat <- array(0, dim = c(length(lat),length(lon),n_p,n_p))
+      size_transition_mat_m_mat[,,1:n_p,1:n_p] <- size_transition_mat_m_mat_temp[1:n_p,1:n_p]
+      
+      
+    }else{
+      size_transition_mat_m_mat<-growth_map(G_spatial,lon, lat,clim_sc, pref_hab, years,pars,
+                                            x_om_init,x_om_last,x_eps_last,x_eps_init,
+                                            beta_scale,binsize,sizes, m_last, m_init,scale_g) 
+      size_transition_mat_f_mat<-growth_map(G_spatial,lon, lat,clim_sc, pref_hab, years,pars,
+                                            x_om_init,x_om_last,x_eps_last,x_eps_init,
+                                            beta_scale,binsize,sizes, m_last, m_init,scale_g) 
+    }
+    }
+    
     #======================================
 
     # bot_temp_dat<-read.csv(paste("temp_data/bot_temp_",time,".csv",sep=""),header=T)
@@ -525,43 +561,7 @@ for(t in 1:(length(proj_period)-1))
           #== mature crab 
           if(terminal_molt==0)
           { 
-           
-            #==make size transition matrix mature
-            if(!G_spatial){
-              # female
-              size_transition_mat_f_mat_temp <- growth_trans(sizes,m_last[1],
-                                                             m_init[1],
-                                                             sizes[1],
-                                                             sizes[n_p],
-                                                             binsize,
-                                                             beta_scale)
-              
-              size_transition_mat_f_mat <- array(0, dim = c(length(lat),length(lon),n_p,n_p))
-              size_transition_mat_f_mat[,,1:n_p,1:n_p] <- size_transition_mat_f_mat_temp[1:n_p,1:n_p]
-              
-              # male
-              size_transition_mat_m_mat_temp <- growth_trans(sizes,m_last[1],
-                                                             m_init[1],
-                                                             sizes[1],
-                                                             sizes[n_p],
-                                                             binsize,
-                                                             beta_scale)
-              size_transition_mat_m_mat <- array(0, dim = c(length(lat),length(lon),n_p,n_p))
-              size_transition_mat_m_mat[,,1:n_p,1:n_p] <- size_transition_mat_m_mat_temp[1:n_p,1:n_p]
-              
-              
-            }else{
-              size_transition_mat_m_mat<-growth_map(G_spatial,lon, lat,clim_sc, pref_hab, years,pars,
-                                                    x_om_init,x_om_last,x_eps_last,x_eps_init,
-                                                    beta_scale,binsize,sizes, m_last, m_init,scale_g) 
-              size_transition_mat_f_mat<-growth_map(G_spatial,lon, lat,clim_sc, pref_hab, years,pars,
-                                                    x_om_init,x_om_last,x_eps_last,x_eps_init,
-                                                    beta_scale,binsize,sizes, m_last, m_init,scale_g) 
-            }
-            
-            
-            
-            if(!is.na(match(molt_time[1,t],t)) ) 
+             if(!is.na(match(molt_time[1,t],t)) ) 
               temp_mat_N[x,y,1,]<-temp_mat_N[x,y,1,]%*%size_transition_mat_f_mat[x,y,,]
             if(!is.na(match(molt_time[2,t],t)))
               temp_mat_N[x,y,2,]<-temp_mat_N[x,y,2,]%*%size_transition_mat_m_mat[x,y,,]   
