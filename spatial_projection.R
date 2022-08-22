@@ -1,4 +1,3 @@
-
 rm(list=ls())
 #==what is the first size class to be modeled?
 #==this depend on how size at maturity changes
@@ -82,21 +81,21 @@ mat_N_at_Len[mat_N_at_Len<0]<-0
 fake_dist_data<-0
 if(fake_dist_data==1)
 {
-#==set dummy initial distribution--take this from the survey for real
-#==this is only for getting mechanics down
-imm_N_at_Len[,,1,1,1]<-rnorm(dim(imm_N_at_Len[,,1,1,1])[1]*dim(imm_N_at_Len[,,1,1,1])[2],1000,100)
-imm_N_at_Len[,,2,1,1]<-rnorm(dim(imm_N_at_Len[,,1,1,1])[1]*dim(imm_N_at_Len[,,1,1,1])[2],1000,100)
-mat_N_at_Len[,,1,1,1]<-rnorm(dim(imm_N_at_Len[,,1,1,1])[1]*dim(imm_N_at_Len[,,1,1,1])[2],1000,100)
-mat_N_at_Len[,,2,1,1]<-rnorm(dim(imm_N_at_Len[,,1,1,1])[1]*dim(imm_N_at_Len[,,1,1,1])[2],1000,100)
-
-for(x in 2:length(sizes))
-{
-  imm_N_at_Len[,,1,x,1]<-imm_N_at_Len[,,1,x-1,1]*exp(-M)
-  imm_N_at_Len[,,2,x,1]<-imm_N_at_Len[,,2,x-1,1]*exp(-M)
-  mat_N_at_Len[,,1,x,1]<-mat_N_at_Len[,,1,x-1,1]*exp(-M)
-  mat_N_at_Len[,,2,x,1]<-mat_N_at_Len[,,2,x-1,1]*exp(-M)
-}
-
+  #==set dummy initial distribution--take this from the survey for real
+  #==this is only for getting mechanics down
+  imm_N_at_Len[,,1,1,1]<-rnorm(dim(imm_N_at_Len[,,1,1,1])[1]*dim(imm_N_at_Len[,,1,1,1])[2],1000,100)
+  imm_N_at_Len[,,2,1,1]<-rnorm(dim(imm_N_at_Len[,,1,1,1])[1]*dim(imm_N_at_Len[,,1,1,1])[2],1000,100)
+  mat_N_at_Len[,,1,1,1]<-rnorm(dim(imm_N_at_Len[,,1,1,1])[1]*dim(imm_N_at_Len[,,1,1,1])[2],1000,100)
+  mat_N_at_Len[,,2,1,1]<-rnorm(dim(imm_N_at_Len[,,1,1,1])[1]*dim(imm_N_at_Len[,,1,1,1])[2],1000,100)
+  
+  for(x in 2:length(sizes))
+  {
+    imm_N_at_Len[,,1,x,1]<-imm_N_at_Len[,,1,x-1,1]*exp(-M)
+    imm_N_at_Len[,,2,x,1]<-imm_N_at_Len[,,2,x-1,1]*exp(-M)
+    mat_N_at_Len[,,1,x,1]<-mat_N_at_Len[,,1,x-1,1]*exp(-M)
+    mat_N_at_Len[,,2,x,1]<-mat_N_at_Len[,,2,x-1,1]*exp(-M)
+  }
+  
 }
 
 #==delete critters where there is land (this will be used for movement as well)
@@ -105,7 +104,7 @@ for(x in 1:length(lat))
   for(y in 1:length(lon))
   {
     if(land[intersect(which(!is.na(match(pts$Var1,(lon)[y]))) ,which(!is.na(match( pts$Var2,(lat)[x]))))])
-     land_mask[x,y]<-0
+      land_mask[x,y]<-0
   }      
 
 #==ugh. this is dumb, but how to automate?
@@ -121,10 +120,10 @@ filled.contour(x=lon,y=rev(lat),g(imm_N_at_Len[,,1,1,1]))
 #==ensures no critters on land
 for(x in 1:2)
   for(y in 1:length(sizes))
-{
- imm_N_at_Len[,,x,y,1]<- imm_N_at_Len[,,x,y,1]*land_mask
- mat_N_at_Len[,,x,y,1]<- imm_N_at_Len[,,x,y,1]*land_mask
-}
+  {
+    imm_N_at_Len[,,x,y,1]<- imm_N_at_Len[,,x,y,1]*land_mask
+    mat_N_at_Len[,,x,y,1]<- imm_N_at_Len[,,x,y,1]*land_mask
+  }
 
 #==SHOULD THERE ALSO BE A 'DEPTH MASK'???
 #==MAYBE A 'FISHERY MASK'??  Depth should limit the fishery.
@@ -202,7 +201,7 @@ port_lat<-  54
 port_lon<- -166.54
 
 cost<-raster(nrow=length(lat), ncol=length(lon), 
-       xmn=min(lon), xmx=max(lon), ymn=min(lat), ymx=max(lat), crs="+proj=utm")
+             xmn=min(lon), xmx=max(lon), ymn=min(lat), ymx=max(lat), crs="+proj=utm")
 cost[]<-1
 for(x in 1:nrow(cost))
   for(y in 1:ncol(cost))
@@ -232,9 +231,9 @@ for(x in 1:length(lon))
   {
     if(land_mask[y,x]!=0)
     {
-    pts <- cbind(x=c(port_lon, as.numeric(colnames(distance_map)[x])), y=c(port_lat,  as.numeric(rownames(distance_map)[y])))
-    distance_map[y,x]<-costDistance(trCostC, pts[1,],pts[2,])
-    if(distance_map[y,x]>10000)distance_map[y,x]<-NA
+      pts <- cbind(x=c(port_lon, as.numeric(colnames(distance_map)[x])), y=c(port_lat,  as.numeric(rownames(distance_map)[y])))
+      distance_map[y,x]<-costDistance(trCostC, pts[1,],pts[2,])
+      if(distance_map[y,x]>10000)distance_map[y,x]<-NA
     }
   }  
 filled.contour(x=lon,y=rev(lat),g(distance_map*land_mask),plot.axes=c(map(add=TRUE,fill=T,col='grey'),
@@ -265,8 +264,8 @@ cost_by_fisher<-array(0,dim=c(length(lat),length(lon),length(proj_period),fisher
 
 #==indices: lat,lon,sex,size,time
 for(t in 1:(length(proj_period)-1))
- #for(t in 1:320)
-    {
+  #for(t in 1:320)
+{
   #==create a 'working' array for a given time step of both mature and immature critters
   
   temp_imm_N<-imm_N_at_Len[,,,,t]
@@ -274,271 +273,271 @@ for(t in 1:(length(proj_period)-1))
   #filled.contour(x=lon,y=rev(lat),g(temp_mat_N[,,1,5]),plot.axes=map(add=TRUE,fill=T,col='grey') )
   # if(survey_time[t]==1)
   #   collect_survey_data()
-
-#==========================
-#==FISHERY OCCURS
-#==========================
-#==indices: lat,lon,sex,size,time
-
+  
+  #==========================
+  #==FISHERY OCCURS
+  #==========================
+  #==indices: lat,lon,sex,size,time
+  
   if(fish_time[t]==1)
   {
-   for(f in 1:fishers)
-   {
-     quota_remaining <- quota[f]
-
-     #==THISNEEDS TO BE FIXED====
-     #==calculate net benefits by patch
-     #==this needs to be based on the amount of quota available
-     # if there is a patch nearby they can get their quota filled, they will go there
-     #==there should be some relationship between cost and biomass in a cell?
-     
-     temp_catch<-array(dim=c(length(lat),length(lon),length(sizes)))
-     for(sex in 1:2)
-       for(x in 1:length(sizes))
-       {
-         temp_catch[,,x]<-temp_imm_N[,,sex,x]*fish_sel[sex,x]*wt_at_len[sex,x] + 
-           temp_mat_N[,,sex,x]*fish_sel[sex,x]*wt_at_len[sex,x]
-       }
-     
-     catch_patch<-apply(temp_catch,c(1,2),sum)
-     catch_patch[catch_patch>quota[f]]<-quota[f] # this makes it so they don't travel a long way if they can get it close
-     
-     #filled.contour(x=lon,y=rev(lat),g(catch_patch),plot.axes=map(add=TRUE,fill=T,col='grey') )
-     net_benefit_patch<-catch_patch*price-cost_patch
-     
-     #filled.contour(x=lon,y=rev(lat),g(net_benefit_patch),plot.axes=map(add=TRUE,fill=T,col='grey'),zlim=c(0,max(net_benefit_patch,na.rm=T)) )
-     max_net_benefit<-which(net_benefit_patch==max(net_benefit_patch,na.rm=T),arr.ind=T)
-     chosen_patch<-max_net_benefit[which(distance_map[max_net_benefit]==min(distance_map[max_net_benefit])),]
-    # filled.contour(x=lon,y=rev(lat),g(net_benefit_patch),
-    #               plot.axes=c(map(add=TRUE,fill=T,col='grey'),
-    #                          points(x=lon[chosen_patch[2]],y=lat[chosen_patch[1]],col=2,pch=16)),
-    #                                zlim=c(0,max(net_benefit_patch,na.rm=T)) )
-    # 
-     #========================================================
-     #==subtract catch from locations while quota is remaining
-     while(quota_remaining>0.1 & net_benefit_patch[chosen_patch[1],chosen_patch[2]]>0)
-     {
-       #==find closest, highest value, fishable patch
-       max_net_benefit<-which(net_benefit_patch==max(net_benefit_patch,na.rm=T),arr.ind=T)
-       #==have to do this if there are two patches with identical net benefits
-       chosen_patch<-max_net_benefit[which(distance_map[max_net_benefit]==min(distance_map[max_net_benefit])),]
- 
-       #==calculate total potential catch in a patch
-       potential_catch<-0
-       for(sex in 1:2)
-         for(x in 1:length(sizes))
-         {
-           potential_catch<-potential_catch + temp_imm_N[chosen_patch[1],chosen_patch[2],sex,x]*fish_sel[sex,x]*wt_at_len[sex,x] + 
-             temp_mat_N[chosen_patch[1],chosen_patch[2],sex,x]*fish_sel[sex,x]*wt_at_len[sex,x]
-         }
-
-       #==patch has less than needed to fill quota
-       if(potential_catch<=quota_remaining)
-       { 
-         for(sex in 1:2)
-           for(x in 1:length(sizes))
-           {
-            total_spatial_catch[chosen_patch[1],chosen_patch[2],sex,x,t] <- total_spatial_catch[chosen_patch[1],chosen_patch[2],sex,x,t] + 
-                                                                            temp_imm_N[chosen_patch[1],chosen_patch[2],sex,x]*fish_sel[sex,x]*wt_at_len[sex,x] + 
-                                                                            temp_mat_N[chosen_patch[1],chosen_patch[2],sex,x]*fish_sel[sex,x]*wt_at_len[sex,x]       
-            
-            temp_catch <- temp_imm_N[chosen_patch[1],chosen_patch[2],sex,x]*fish_sel[sex,x]*wt_at_len[sex,x]*use_harv + 
-                          temp_mat_N[chosen_patch[1],chosen_patch[2],sex,x]*fish_sel[sex,x]*wt_at_len[sex,x]*use_harv
-            
-            catch_by_fisher[chosen_patch[1],chosen_patch[2],sex,x,t,f]  <- catch_by_fisher[chosen_patch[1],chosen_patch[2],sex,x,t,f] + temp_catch
-
-           }
-         cost_by_fisher[chosen_patch[1],chosen_patch[2],t,f]   <- cost_by_fisher[chosen_patch[1],chosen_patch[2],t,f] + cost_patch[chosen_patch[1],chosen_patch[2]]        
-         quota_remaining<-quota_remaining - sum(catch_by_fisher[chosen_patch[1],chosen_patch[2],,,t,f])
-         #==update temp array of n at len
-         for(sex in 1:2)
-           for(x in 1:length(sizes))
-           {
-             temp_imm_N[chosen_patch[1],chosen_patch[2],sex,x] <- temp_imm_N[chosen_patch[1],chosen_patch[2],sex,x] - temp_imm_N[chosen_patch[1],chosen_patch[2],sex,x]*fish_sel[sex,x]
-             temp_mat_N[chosen_patch[1],chosen_patch[2],sex,x] <- temp_mat_N[chosen_patch[1],chosen_patch[2],sex,x] - temp_mat_N[chosen_patch[1],chosen_patch[2],sex,x]*fish_sel[sex,x]
-           }
-       
-       }
-       
-       #==patch has more than needed to fill quota
-       if(potential_catch>quota_remaining)
-       {
-         #==find harvest rate that would fill quota
-         maxHarv<-1
-         minHarv<-.0000001
-         for(o in 1:25)
-         {
-           use_harv<-(maxHarv+minHarv)/2
-           temp_cat<-0
-           for(sex in 1:2)
-             for(x in 1:length(sizes))
-             {
-              temp_cat<-temp_cat+
-                        temp_imm_N[chosen_patch[1],chosen_patch[2],sex,x]*fish_sel[sex,x]*wt_at_len[sex,x]*use_harv + 
-                        temp_mat_N[chosen_patch[1],chosen_patch[2],sex,x]*fish_sel[sex,x]*wt_at_len[sex,x]*use_harv
-             }
-           if(temp_cat<quota_remaining)
-             minHarv<-use_harv
-           if(temp_cat>quota_remaining)
-             maxHarv<-use_harv
-         }
-         
-         temp_catch<-0
-         for(sex in 1:2)
-           for(x in 1:length(sizes))
-           {
-             total_spatial_catch[chosen_patch[1],chosen_patch[2],sex,x,t] <- total_spatial_catch[chosen_patch[1],chosen_patch[2],sex,x,t] + 
-                                                                              temp_imm_N[chosen_patch[1],chosen_patch[2],sex,x]*fish_sel[sex,x]*use_harv + 
-                                                                              temp_mat_N[chosen_patch[1],chosen_patch[2],sex,x]*fish_sel[sex,x]*use_harv  
-             
-
-             temp_catch<- temp_imm_N[chosen_patch[1],chosen_patch[2],sex,x]*fish_sel[sex,x]*wt_at_len[sex,x]*use_harv + 
-                          temp_mat_N[chosen_patch[1],chosen_patch[2],sex,x]*fish_sel[sex,x]*wt_at_len[sex,x]*use_harv
-             
-             catch_by_fisher[chosen_patch[1],chosen_patch[2],sex,x,t,f]  <- catch_by_fisher[chosen_patch[1],chosen_patch[2],sex,x,t,f] + temp_catch
-           }
-         #sum(catch_by_fisher[chosen_patch[1],chosen_patch[2],,,t,f])
-         quota_remaining<-quota_remaining - sum(catch_by_fisher[chosen_patch[1],chosen_patch[2],,,t,f])
-         cost_by_fisher[chosen_patch[1],chosen_patch[2],t,f]   <- cost_by_fisher[chosen_patch[1],chosen_patch[2],t,f] + cost_patch[chosen_patch[1],chosen_patch[2]]
-         
-         #==update temp array of n at len
-         for(sex in 1:2)
-           for(x in 1:length(sizes))
-           {
-             temp_imm_N[chosen_patch[1],chosen_patch[2],sex,x] <- temp_imm_N[chosen_patch[1],chosen_patch[2],sex,x] - temp_imm_N[chosen_patch[1],chosen_patch[2],sex,x]*fish_sel[sex,x]*use_harv
-             temp_mat_N[chosen_patch[1],chosen_patch[2],sex,x] <- temp_mat_N[chosen_patch[1],chosen_patch[2],sex,x] - temp_mat_N[chosen_patch[1],chosen_patch[2],sex,x]*fish_sel[sex,x]*use_harv
-           }
-       }
-       
-      #===update the net benefits in while loop
-       temp_catch<-array(dim=c(length(lat),length(lon),length(sizes)))
-       for(sex in 1:2)
-         for(x in 1:length(sizes))
-           temp_catch[,,x]<-temp_imm_N[,,sex,x]*fish_sel[sex,x]*wt_at_len[sex,x] + temp_mat_N[,,sex,x]*fish_sel[sex,x]*wt_at_len[sex,x]
-
-       catch_patch<-apply(catch_patch,c(1,2),sum)
-       catch_patch[catch_patch>quota_remaining]<-quota_remaining
-       net_benefit_patch<-catch_patch*price - cost_patch
+    for(f in 1:fishers)
+    {
+      quota_remaining <- quota[f]
+      
+      #==THISNEEDS TO BE FIXED====
+      #==calculate net benefits by patch
+      #==this needs to be based on the amount of quota available
+      # if there is a patch nearby they can get their quota filled, they will go there
+      #==there should be some relationship between cost and biomass in a cell?
+      
+      temp_catch<-array(dim=c(length(lat),length(lon),length(sizes)))
+      for(sex in 1:2)
+        for(x in 1:length(sizes))
+        {
+          temp_catch[,,x]<-temp_imm_N[,,sex,x]*fish_sel[sex,x]*wt_at_len[sex,x] + 
+            temp_mat_N[,,sex,x]*fish_sel[sex,x]*wt_at_len[sex,x]
+        }
+      
+      catch_patch<-apply(temp_catch,c(1,2),sum)
+      catch_patch[catch_patch>quota[f]]<-quota[f] # this makes it so they don't travel a long way if they can get it close
+      
+      #filled.contour(x=lon,y=rev(lat),g(catch_patch),plot.axes=map(add=TRUE,fill=T,col='grey') )
+      net_benefit_patch<-catch_patch*price-cost_patch
+      
+      #filled.contour(x=lon,y=rev(lat),g(net_benefit_patch),plot.axes=map(add=TRUE,fill=T,col='grey'),zlim=c(0,max(net_benefit_patch,na.rm=T)) )
+      max_net_benefit<-which(net_benefit_patch==max(net_benefit_patch,na.rm=T),arr.ind=T)
+      chosen_patch<-max_net_benefit[which(distance_map[max_net_benefit]==min(distance_map[max_net_benefit])),]
+      # filled.contour(x=lon,y=rev(lat),g(net_benefit_patch),
+      #               plot.axes=c(map(add=TRUE,fill=T,col='grey'),
+      #                          points(x=lon[chosen_patch[2]],y=lat[chosen_patch[1]],col=2,pch=16)),
+      #                                zlim=c(0,max(net_benefit_patch,na.rm=T)) )
+      # 
+      #========================================================
+      #==subtract catch from locations while quota is remaining
+      while(quota_remaining>0.1 & net_benefit_patch[chosen_patch[1],chosen_patch[2]]>0)
+      {
+        #==find closest, highest value, fishable patch
+        max_net_benefit<-which(net_benefit_patch==max(net_benefit_patch,na.rm=T),arr.ind=T)
+        #==have to do this if there are two patches with identical net benefits
+        chosen_patch<-max_net_benefit[which(distance_map[max_net_benefit]==min(distance_map[max_net_benefit])),]
+        
+        #==calculate total potential catch in a patch
+        potential_catch<-0
+        for(sex in 1:2)
+          for(x in 1:length(sizes))
+          {
+            potential_catch<-potential_catch + temp_imm_N[chosen_patch[1],chosen_patch[2],sex,x]*fish_sel[sex,x]*wt_at_len[sex,x] + 
+              temp_mat_N[chosen_patch[1],chosen_patch[2],sex,x]*fish_sel[sex,x]*wt_at_len[sex,x]
+          }
+        
+        #==patch has less than needed to fill quota
+        if(potential_catch<=quota_remaining)
+        { 
+          for(sex in 1:2)
+            for(x in 1:length(sizes))
+            {
+              total_spatial_catch[chosen_patch[1],chosen_patch[2],sex,x,t] <- total_spatial_catch[chosen_patch[1],chosen_patch[2],sex,x,t] + 
+                temp_imm_N[chosen_patch[1],chosen_patch[2],sex,x]*fish_sel[sex,x]*wt_at_len[sex,x] + 
+                temp_mat_N[chosen_patch[1],chosen_patch[2],sex,x]*fish_sel[sex,x]*wt_at_len[sex,x]       
+              
+              temp_catch <- temp_imm_N[chosen_patch[1],chosen_patch[2],sex,x]*fish_sel[sex,x]*wt_at_len[sex,x]*use_harv + 
+                temp_mat_N[chosen_patch[1],chosen_patch[2],sex,x]*fish_sel[sex,x]*wt_at_len[sex,x]*use_harv
+              
+              catch_by_fisher[chosen_patch[1],chosen_patch[2],sex,x,t,f]  <- catch_by_fisher[chosen_patch[1],chosen_patch[2],sex,x,t,f] + temp_catch
+              
+            }
+          cost_by_fisher[chosen_patch[1],chosen_patch[2],t,f]   <- cost_by_fisher[chosen_patch[1],chosen_patch[2],t,f] + cost_patch[chosen_patch[1],chosen_patch[2]]        
+          quota_remaining<-quota_remaining - sum(catch_by_fisher[chosen_patch[1],chosen_patch[2],,,t,f])
+          #==update temp array of n at len
+          for(sex in 1:2)
+            for(x in 1:length(sizes))
+            {
+              temp_imm_N[chosen_patch[1],chosen_patch[2],sex,x] <- temp_imm_N[chosen_patch[1],chosen_patch[2],sex,x] - temp_imm_N[chosen_patch[1],chosen_patch[2],sex,x]*fish_sel[sex,x]
+              temp_mat_N[chosen_patch[1],chosen_patch[2],sex,x] <- temp_mat_N[chosen_patch[1],chosen_patch[2],sex,x] - temp_mat_N[chosen_patch[1],chosen_patch[2],sex,x]*fish_sel[sex,x]
+            }
+          
+        }
+        
+        #==patch has more than needed to fill quota
+        if(potential_catch>quota_remaining)
+        {
+          #==find harvest rate that would fill quota
+          maxHarv<-1
+          minHarv<-.0000001
+          for(o in 1:25)
+          {
+            use_harv<-(maxHarv+minHarv)/2
+            temp_cat<-0
+            for(sex in 1:2)
+              for(x in 1:length(sizes))
+              {
+                temp_cat<-temp_cat+
+                  temp_imm_N[chosen_patch[1],chosen_patch[2],sex,x]*fish_sel[sex,x]*wt_at_len[sex,x]*use_harv + 
+                  temp_mat_N[chosen_patch[1],chosen_patch[2],sex,x]*fish_sel[sex,x]*wt_at_len[sex,x]*use_harv
+              }
+            if(temp_cat<quota_remaining)
+              minHarv<-use_harv
+            if(temp_cat>quota_remaining)
+              maxHarv<-use_harv
+          }
+          
+          temp_catch<-0
+          for(sex in 1:2)
+            for(x in 1:length(sizes))
+            {
+              total_spatial_catch[chosen_patch[1],chosen_patch[2],sex,x,t] <- total_spatial_catch[chosen_patch[1],chosen_patch[2],sex,x,t] + 
+                temp_imm_N[chosen_patch[1],chosen_patch[2],sex,x]*fish_sel[sex,x]*use_harv + 
+                temp_mat_N[chosen_patch[1],chosen_patch[2],sex,x]*fish_sel[sex,x]*use_harv  
+              
+              
+              temp_catch<- temp_imm_N[chosen_patch[1],chosen_patch[2],sex,x]*fish_sel[sex,x]*wt_at_len[sex,x]*use_harv + 
+                temp_mat_N[chosen_patch[1],chosen_patch[2],sex,x]*fish_sel[sex,x]*wt_at_len[sex,x]*use_harv
+              
+              catch_by_fisher[chosen_patch[1],chosen_patch[2],sex,x,t,f]  <- catch_by_fisher[chosen_patch[1],chosen_patch[2],sex,x,t,f] + temp_catch
+            }
+          #sum(catch_by_fisher[chosen_patch[1],chosen_patch[2],,,t,f])
+          quota_remaining<-quota_remaining - sum(catch_by_fisher[chosen_patch[1],chosen_patch[2],,,t,f])
+          cost_by_fisher[chosen_patch[1],chosen_patch[2],t,f]   <- cost_by_fisher[chosen_patch[1],chosen_patch[2],t,f] + cost_patch[chosen_patch[1],chosen_patch[2]]
+          
+          #==update temp array of n at len
+          for(sex in 1:2)
+            for(x in 1:length(sizes))
+            {
+              temp_imm_N[chosen_patch[1],chosen_patch[2],sex,x] <- temp_imm_N[chosen_patch[1],chosen_patch[2],sex,x] - temp_imm_N[chosen_patch[1],chosen_patch[2],sex,x]*fish_sel[sex,x]*use_harv
+              temp_mat_N[chosen_patch[1],chosen_patch[2],sex,x] <- temp_mat_N[chosen_patch[1],chosen_patch[2],sex,x] - temp_mat_N[chosen_patch[1],chosen_patch[2],sex,x]*fish_sel[sex,x]*use_harv
+            }
+        }
+        
+        #===update the net benefits in while loop
+        temp_catch<-array(dim=c(length(lat),length(lon),length(sizes)))
+        for(sex in 1:2)
+          for(x in 1:length(sizes))
+            temp_catch[,,x]<-temp_imm_N[,,sex,x]*fish_sel[sex,x]*wt_at_len[sex,x] + temp_mat_N[,,sex,x]*fish_sel[sex,x]*wt_at_len[sex,x]
+        
+        catch_patch<-apply(catch_patch,c(1,2),sum)
+        catch_patch[catch_patch>quota_remaining]<-quota_remaining
+        net_benefit_patch<-catch_patch*price - cost_patch
       }
-
-     profit_by_fisher[chosen_patch[1],chosen_patch[2],t,f] <- sum(catch_by_fisher[chosen_patch[1],chosen_patch[2],,,t,f])*price - cost_by_fisher[chosen_patch[1],chosen_patch[2],t,f]
-   }
+      
+      profit_by_fisher[chosen_patch[1],chosen_patch[2],t,f] <- sum(catch_by_fisher[chosen_patch[1],chosen_patch[2],,,t,f])*price - cost_by_fisher[chosen_patch[1],chosen_patch[2],t,f]
+    }
     
   }
- 
-#==========================
-#==MOVEMENT OCCURS
-#==========================  
+  
+  #==========================
+  #==MOVEMENT OCCURS
+  #==========================  
   #==movement input as a .csv?
   #==movement constant?
   #==movement follows gradient?
   
   if(move_time[t]==1)
   {
-   #==two options: gaussian and temperature mediated
-   #==gaussian
-   #==create disperal kernel for each space 
-
+    #==two options: gaussian and temperature mediated
+    #==gaussian
+    #==create disperal kernel for each space 
+    
   }
   
-#==========================
-#==GROWTH OCCURS
-#==========================
+  #==========================
+  #==GROWTH OCCURS
+  #==========================
   if(molt_time[1,t]==1 | molt_time[2,t]==1 )
-    {
-      # bot_temp_dat<-read.csv(paste("temp_data/bot_temp_",time,".csv",sep=""),header=T)
-      for(x in 1:nrow(imm_N_at_Len[,,,,t]))
-        for(y in 1:ncol(imm_N_at_Len[,,,,t]))
+  {
+    # bot_temp_dat<-read.csv(paste("temp_data/bot_temp_",time,".csv",sep=""),header=T)
+    for(x in 1:nrow(imm_N_at_Len[,,,,t]))
+      for(y in 1:ncol(imm_N_at_Len[,,,,t]))
+      {
+        if(land_mask[x,y]!=0)
         {
-          if(land_mask[x,y]!=0)
+          #==this is where Max's maps could be implemented
+          #==plug temp into growth curve
+          f_postmolt_imm<-alpha_grow_f_imm + beta_grow_f_imm*sizes
+          m_postmolt_imm<-alpha_grow_m_imm + beta_grow_m_imm*sizes
+          f_postmolt_mat<-alpha_grow_f_mat + beta_grow_f_mat*sizes
+          m_postmolt_mat<-alpha_grow_m_mat + beta_grow_m_mat*sizes
+          
+          #======================================
+          #==make size transition matrix immature
+          size_transition_mat_m_imm<-matrix(ncol=length(sizes),nrow=length(sizes))
+          size_transition_mat_f_imm<-matrix(ncol=length(sizes),nrow=length(sizes))
+          
+          for(n in 1:nrow(size_transition_mat_m_imm))
           {
-            #==this is where Max's maps could be implemented
-            #==plug temp into growth curve
-            f_postmolt_imm<-alpha_grow_f_imm + beta_grow_f_imm*sizes
-            m_postmolt_imm<-alpha_grow_m_imm + beta_grow_m_imm*sizes
-            f_postmolt_mat<-alpha_grow_f_mat + beta_grow_f_mat*sizes
-            m_postmolt_mat<-alpha_grow_m_mat + beta_grow_m_mat*sizes
+            size_transition_mat_m_imm[n,]<-dnorm(x=sizes,mean=m_postmolt_imm[n],sd=growth_sd_imm[2])
+            size_transition_mat_f_imm[n,]<-dnorm(x=sizes,mean=f_postmolt_imm[n],sd=growth_sd_imm[1])
+          }
+          
+          #==ensure no crab shrinks in size after molting
+          size_transition_mat_f_imm[lower.tri(size_transition_mat_f_imm)]<-0
+          size_transition_mat_m_imm[lower.tri(size_transition_mat_m_imm)]<-0
+          
+          #==standardize to sum to 1
+          for(z in 1:nrow(size_transition_mat_f_imm))
+          {
+            size_transition_mat_f_imm[z,]<-size_transition_mat_f_imm[z,]/sum(size_transition_mat_f_imm[z,],na.rm=T)
+            size_transition_mat_m_imm[z,]<-size_transition_mat_m_imm[z,]/sum(size_transition_mat_m_imm[z,],na.rm=T)
+          }
+          
+          #==immature crab molt, some mature, some remain immature
+          if(molt_time[1,t]==1)
+          {
+            tmp_molt          <-temp_imm_N[x,y,1,]%*%size_transition_mat_f_imm
+            temp_imm_N[x,y,1,]<-tmp_molt*term_molt_prob
+            temp_mat_N[x,y,1,]<-temp_mat_N[x,y,1,] + (1-term_molt_prob)*tmp_molt
             
+          }
+          if(molt_time[2,t]==1)
+          {
+            tmp_molt          <-temp_imm_N[x,y,2,]%*%size_transition_mat_m_imm
+            temp_imm_N[x,y,2,]<-tmp_molt*term_molt_prob
+            temp_mat_N[x,y,2,]<-temp_mat_N[x,y,2,] + (1-term_molt_prob)*tmp_molt
+          }
+          
+          if(terminal_molt==0)
+          { 
             #======================================
-            #==make size transition matrix immature
-            size_transition_mat_m_imm<-matrix(ncol=length(sizes),nrow=length(sizes))
-            size_transition_mat_f_imm<-matrix(ncol=length(sizes),nrow=length(sizes))
+            #==make size transition matrix mature
+            size_transition_mat_m_mat<-matrix(ncol=length(sizes),nrow=length(sizes))
+            size_transition_mat_f_mat<-matrix(ncol=length(sizes),nrow=length(sizes))
             
-            for(n in 1:nrow(size_transition_mat_m_imm))
+            for(n in 1:nrow(size_transition_mat_m_mat))
             {
-              size_transition_mat_m_imm[n,]<-dnorm(x=sizes,mean=m_postmolt_imm[n],sd=growth_sd_imm[2])
-              size_transition_mat_f_imm[n,]<-dnorm(x=sizes,mean=f_postmolt_imm[n],sd=growth_sd_imm[1])
+              size_transition_mat_m_mat[n,]<-dnorm(x=sizes,mean=m_postmolt_mat[n],sd=growth_sd_mat[2])
+              size_transition_mat_f_mat[n,]<-dnorm(x=sizes,mean=f_postmolt_mat[n],sd=growth_sd_mat[1])
             }
             
             #==ensure no crab shrinks in size after molting
-            size_transition_mat_f_imm[lower.tri(size_transition_mat_f_imm)]<-0
-            size_transition_mat_m_imm[lower.tri(size_transition_mat_m_imm)]<-0
+            size_transition_mat_f_mat[lower.tri(size_transition_mat_f_mat)]<-0
+            size_transition_mat_m_mat[lower.tri(size_transition_mat_m_mat)]<-0
             
-            #==standardize to sum to 1
-            for(z in 1:nrow(size_transition_mat_f_imm))
+            #==normalize
+            for(z in 1:nrow(size_transition_mat_m_mat))
             {
-              size_transition_mat_f_imm[z,]<-size_transition_mat_f_imm[z,]/sum(size_transition_mat_f_imm[z,],na.rm=T)
-              size_transition_mat_m_imm[z,]<-size_transition_mat_m_imm[z,]/sum(size_transition_mat_m_imm[z,],na.rm=T)
+              size_transition_mat_f_mat[z,]<-size_transition_mat_f_mat[z,]/sum(size_transition_mat_f_mat[z,],na.rm=T)
+              size_transition_mat_m_mat[z,]<-size_transition_mat_m_mat[z,]/sum(size_transition_mat_m_mat[z,],na.rm=T)
             }
-            
-            #==immature crab molt, some mature, some remain immature
-            if(molt_time[1,t]==1)
-            {
-              tmp_molt          <-temp_imm_N[x,y,1,]%*%size_transition_mat_f_imm
-              temp_imm_N[x,y,1,]<-tmp_molt*term_molt_prob
-              temp_mat_N[x,y,1,]<-temp_mat_N[x,y,1,] + (1-term_molt_prob)*tmp_molt
-              
-            }
-            if(molt_time[2,t]==1)
-            {
-              tmp_molt          <-temp_imm_N[x,y,2,]%*%size_transition_mat_m_imm
-              temp_imm_N[x,y,2,]<-tmp_molt*term_molt_prob
-              temp_mat_N[x,y,2,]<-temp_mat_N[x,y,2,] + (1-term_molt_prob)*tmp_molt
-            }
-            
-            if(terminal_molt==0)
-            { 
-              #======================================
-              #==make size transition matrix mature
-              size_transition_mat_m_mat<-matrix(ncol=length(sizes),nrow=length(sizes))
-              size_transition_mat_f_mat<-matrix(ncol=length(sizes),nrow=length(sizes))
-              
-              for(n in 1:nrow(size_transition_mat_m_mat))
-              {
-                size_transition_mat_m_mat[n,]<-dnorm(x=sizes,mean=m_postmolt_mat[n],sd=growth_sd_mat[2])
-                size_transition_mat_f_mat[n,]<-dnorm(x=sizes,mean=f_postmolt_mat[n],sd=growth_sd_mat[1])
-              }
-              
-              #==ensure no crab shrinks in size after molting
-              size_transition_mat_f_mat[lower.tri(size_transition_mat_f_mat)]<-0
-              size_transition_mat_m_mat[lower.tri(size_transition_mat_m_mat)]<-0
-              
-              #==normalize
-              for(z in 1:nrow(size_transition_mat_m_mat))
-              {
-                size_transition_mat_f_mat[z,]<-size_transition_mat_f_mat[z,]/sum(size_transition_mat_f_mat[z,],na.rm=T)
-                size_transition_mat_m_mat[z,]<-size_transition_mat_m_mat[z,]/sum(size_transition_mat_m_mat[z,],na.rm=T)
-              }
-              if(!is.na(match(molt_time[1,t],t)) ) 
-                temp_mat_N[x,y,1,]<-temp_mat_N[x,y,1,]%*%size_transition_mat_f_mat
-              if(!is.na(match(molt_time[2,t],t)))
-                temp_mat_N[x,y,2,]<-temp_mat_N[x,y,2,]%*%size_transition_mat_m_mat     
-            }
+            if(!is.na(match(molt_time[1,t],t)) ) 
+              temp_mat_N[x,y,1,]<-temp_mat_N[x,y,1,]%*%size_transition_mat_f_mat
+            if(!is.na(match(molt_time[2,t],t)))
+              temp_mat_N[x,y,2,]<-temp_mat_N[x,y,2,]%*%size_transition_mat_m_mat     
           }
-        }  
+        }
+      }  
   } 
-      
-#==========================
-#==SPAWNING OCCURS
-#==========================      
-#==this makes a map of spawning biomass to be used with transition matrices for recruitment
+  
+  #==========================
+  #==SPAWNING OCCURS
+  #==========================      
+  #==this makes a map of spawning biomass to be used with transition matrices for recruitment
   
   if(mate_time[t]==1 )
   {
-   #==aggregate spawnign biomass
-   #==just count female biomass?
-   #==include sperm reserves?
-   #==include biennial spawning?
+    #==aggregate spawnign biomass
+    #==just count female biomass?
+    #==include sperm reserves?
+    #==include biennial spawning?
     
     #==THIS IS JUST NUMBERS RIGHT NOW...
     spbiom<-apply(temp_mat_N[,,1,],c(1,2),sum,na.rm=T)
@@ -546,11 +545,11 @@ for(t in 1:(length(proj_period)-1))
     plot_spb[plot_spb==0]<-NA
     # filled.contour(x=lon,y=rev(lat),g(plot_spb),plot.axes=map(add=TRUE,fill=T,col='grey') )
   }
-
   
-#==========================
-#==RECRUITMENT OCCURS
-#========================== 
+  
+  #==========================
+  #==RECRUITMENT OCCURS
+  #========================== 
   #==how do we determine which bins they drop into?
   #==will temperature determine the size they reach in the time before they settle?
   if(recruit_time[t]==1)
@@ -566,8 +565,8 @@ for(t in 1:(length(proj_period)-1))
     
     for(r in 1:rec_sizes)
     {
-     temp_imm_N[,,1,r] <- temp_imm_N[,,1,r] + imm_N_at_Len[,,1,r,1]*tmp_rec_1
-     temp_imm_N[,,2,r] <- temp_imm_N[,,2,r] + imm_N_at_Len[,,2,r,1]*tmp_rec_2
+      temp_imm_N[,,1,r] <- temp_imm_N[,,1,r] + imm_N_at_Len[,,1,r,1]*tmp_rec_1
+      temp_imm_N[,,2,r] <- temp_imm_N[,,2,r] + imm_N_at_Len[,,2,r,1]*tmp_rec_2
     }
   }
   
@@ -576,8 +575,8 @@ for(t in 1:(length(proj_period)-1))
   imm_N_at_Len[,,2,,t+1] <-  temp_imm_N[,,2,]*exp(-imm_male_M*1/year_step)
   mat_N_at_Len[,,1,,t+1] <-  temp_mat_N[,,1,]*exp(-mat_fem_M*1/year_step)
   mat_N_at_Len[,,2,,t+1] <-  temp_mat_N[,,2,]*exp(-mat_male_M*1/year_step)
-
-
+  
+  
 }
 
 tot_catch<-apply(catch_by_fisher,c(5),sum,na.rm=T)
@@ -603,4 +602,3 @@ plot(tot_cost[(tot_profit>0)],xaxt='n',las=1,type='b',pch=16)
 legend('right',bty='n',legend=c("Total cost"))
 plot(tot_profit[(tot_profit>0)],las=1,type='b',pch=16)
 legend('right',bty='n',legend=c("Total profits"))
-
