@@ -5,4 +5,5 @@
 
 # ngoiing work
 garbage/
-spatial/projection/
+spatial_projection/
+*.Rproj
