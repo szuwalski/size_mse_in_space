@@ -10,11 +10,11 @@ growth <- function(sizes,
   
 
 #-- Map of growth matrix
-growth_matrix   = array (data = 0, dim = c(n_s,n_p,n_p))
+growth_matrix = array (data = 0, dim = c(n_s,n_p,n_p))
 growth_par = array (data = NA, dim = c(n_s,pars_LHP_setting$n_grpar))
 
 #-- no space
-source("spatial_projection/LHP_functions/script_growth_inc.R")
+source("2_Max_spatial_projection/LHP_functions/script_growth_inc.R")
 
 if (!pars_LHP_setting$LHP_spatial) {
   for (k in 1:n_s) {
@@ -30,7 +30,7 @@ if (!pars_LHP_setting$LHP_spatial) {
 }else{
   
 # -- Space  
-source("spatial_projection/LHP_functions/pars_LHP_map.R")  
+source("2_Max_spatial_projection/LHP_functions/pars_LHP_map.R")  
   
   growth_par <- array(0, c(n_s,pars_LHP_setting$n_grpar)) 
   for (i in 1:(pars_LHP_setting$n_grpar - 1)) {
@@ -106,7 +106,7 @@ p <- ggplot() +   geom_raster(Growth_temp2 %>% filter(Size_class_from==1), mappi
   geom_sf(data = world_sf,fill="black",color=NA)+ 
   coord_sf(xlim=range(loc_x$lon), ylim=range((loc_x$lat)))
 
-p + facet_wrap(~Size_class_to)
+plot(p + facet_wrap(~Size_class_to))
 
 }
 

@@ -25,7 +25,7 @@ pars_LHP_map <- function(pref_hab,
   # -------------------------------------------------------------------------
   
   # Load Temperature scenarios  ---------------------------------------------
-  load("spatial_projection/Climate_scenarios/mn_var_all.RData")
+  load("2_Max_spatial_projection/Climate_scenarios/mn_var_all.RData")
   En.cond <- mn_var_all %>% filter(simulation %in% clim_sc , year %in% years ) %>% dplyr::select(year,simulation, latitude,longitude, val)
   En.cond <- En.cond %>% mutate(Lon = ifelse(longitude <= 180, longitude, longitude -360),Lat=latitude)
   dat_cond <-  data.frame(coords=En.cond[,c("Lon","Lat")],Year=En.cond$year, Temp=En.cond$val, Climate_sc = En.cond$simulation)

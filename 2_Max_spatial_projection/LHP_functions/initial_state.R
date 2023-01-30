@@ -5,8 +5,8 @@ initial_state <- function(fake_dist_data, n_s, n_n, n_p, n_t,plot=FALSE) {
   dim(imm_N_at_Len)
   mat_N_at_Len <- array(dim = c(n_lat, n_lon, n_n, n_p, n_t))
   
-  load(file = "spatial_projection/Input_data/initial_states/smooth_mat_N_at_Len_2017.RData") # smooth_mat
-  load(file = "spatial_projection/Input_data/initial_states/smooth_imm_N_at_Len_2017.RData") # smooth_imm
+  load(file = "2_Max_spatial_projection/Input_data/initial_states/smooth_mat_N_at_Len_2017.RData") # smooth_mat
+  load(file = "2_Max_spatial_projection/Input_data/initial_states/smooth_imm_N_at_Len_2017.RData") # smooth_imm
   
   
   #==FIX THIS SO THAT THESE DISTRIBUTIONS ARE MADE TO TRUE DISTRIBUTIONS AND MULTIPLIED BY NUMBERS AT LENGTH FROM ASSESSMENT
@@ -45,7 +45,7 @@ initial_state <- function(fake_dist_data, n_s, n_n, n_p, n_t,plot=FALSE) {
     }
     
   }
-  plot(mat_N_at_Len)
+  if(plot == TRUE) plot(mat_N_at_Len)
   #==ugh. this is dumb, but how to automate?
   g <- function(m)
     t(m)[, nrow(m):1]

@@ -31,4 +31,7 @@ library(maps)
 library(maptools)
 library(gdistance)
 library(raster)
+library(rnaturalearth)
 library(svMisc)
+
+world_sf <- ne_countries(scale = "medium", returnclass = "sf")

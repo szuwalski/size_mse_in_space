@@ -73,7 +73,7 @@ costs_to_fish <-
     filled.contour(
       x = lon,
       y = rev(lat),
-      g(distance_map * land_mask),
+      (distance_map * land_mask),
       plot.axes = c(
         map(add = TRUE, fill = T, col = 'grey'),
         points(

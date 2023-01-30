@@ -6,8 +6,7 @@ rm(list=ls())
 # -------------------------------------------------------------------------
 ###########################################################################
 
-setwd("C:/Users/Maxime/Documents/Git/size_mse_in_space")
-source("spatial_projection/LHP_functions/libraries.R")
+source("2_Max_spatial_projection/LHP_functions/libraries.R")
 
 # -------------------------------------------------------------------------
 # -------------------------------------------------------------------------
@@ -17,12 +16,14 @@ source("spatial_projection/LHP_functions/libraries.R")
 
 # 0-a- Output file --------------------------------------------------------
 # -------------------------------------------------------------------------
-DateFile = paste0(getwd(), "/spatial_projection/Outputs/")
-dir.create(DateFile)  
+DateFile = paste0(getwd(), "/2_Max_spatial_projection/Outputs/")
+if(!dir.exists(DateFile)) dir.create(DateFile)
 
 # 0-b- Spatial resolution -------------------------------------------------
 # -------------------------------------------------------------------------
-source("spatial_projection/LHP_functions/spatial_grid.R")
+source("2_Max_spatial_projection/LHP_functions/spatial_grid.R")
+
+
 #-- Define grid to predict the Field
 lat		   <- round(seq(70,51.5,length.out=40),2)
 lon <-  round(seq(-179,-155,length.out=40),2)
@@ -34,14 +35,14 @@ attach(spatial_grid)
 
 # 0-c-Size bins -----------------------------------------------------------
 # -------------------------------------------------------------------------
-binsize  <-5
+binsize  <- 35
 sizes		 <-seq(27.5,132.5,binsize)
 n_p = as.numeric(length(sizes))
 
 # 0-d- Years --------------------------------------------------------------
 # -------------------------------------------------------------------------
-year_step <-12 # months
-year_n	 <-30 # nber of years
+year_step <-1 # 12 # months
+year_n	 <-1 # nber of years
 proj_period	<-seq(1,year_step*year_n)
 n_t <- length(proj_period)
 
@@ -178,7 +179,7 @@ pars_pref_hab_growth = c(4,2)
 
 # 3-d- Growth Settings ----------------------------------------------------
 # -------------------------------------------------------------------------
-source("spatial_projection/LHP_functions/pars_LHP_setting.R")
+source("2_Max_spatial_projection/LHP_functions/pars_LHP_setting.R")
 
 pars_Growth_setting_m_imm <- pars_LHP_setting(pref_hab_growth,
                                               pars_pref_hab_growth,
@@ -227,9 +228,12 @@ pars_Growth_setting_f_mat <- pars_LHP_setting(pref_hab_growth,
                                               growth_par_beta[,,4],
                                               n_grpar_growth,
                                               Years_climsc)
+
+
 # 3-e - Generates Growth --------------------------------------------------
 # -------------------------------------------------------------------------
-source("spatial_projection/LHP_functions/growth.R")
+G_spatial <- T
+source("2_Max_spatial_projection/LHP_functions/growth.R")
 
 growth_m_imm <- array(0,dim=c(n_t,length(lon),length(lat),n_p,n_p))
 growth_m_mat <- array(0,dim=c(n_t,length(lon),length(lat),n_p,n_p))
@@ -259,29 +263,28 @@ for(t in 1:n_t){
                                   pars_Growth_setting_m_imm,
                                   n_s,
                                   n_p,
-                                  plot = FALSE)
+                                  plot = F)
     
     growth_m_mat[t,,,,] <- growth(sizes,
                                     binsize,
                                     pars_Growth_setting_m_mat,
                                     n_s,
                                     n_p,
-                                    plot = FALSE)
+                                    plot = F)
     
     growth_f_imm[t,,,,] <- growth(sizes,
                                     binsize,
                                     pars_Growth_setting_f_imm ,
                                     n_s,
                                     n_p,
-                                    plot = FALSE)
-    
+                                    plot = F)
     
     growth_f_mat[t,,,,] <- growth(sizes,
                                     binsize,
                                     pars_Growth_setting_f_mat,
                                     n_s,
                                     n_p,
-                                    plot = FALSE)
+                                    plot = F)
     Sys.sleep(0.1)
     setTxtProgressBar(pb,t)
     
@@ -293,7 +296,7 @@ dim(growth_m_imm)
 size_transition_mat_f_imm  <- growth_f_imm
 size_transition_mat_f_mat  <- growth_f_mat
 size_transition_mat_m_imm  <- growth_m_imm
-size_transition_mat_m_mat  <- growth_m_mat  
+size_transition_mat_m_mat  <- growth_m_mat
 
 
 # ------------------------------------------------------------------------- 
@@ -379,8 +382,6 @@ price<-1.5
 fishers<-2
 quota<-rep(10000000,year_n)
 
-
-
 fake_dist_data<-0
 
 ###########################################################################
@@ -394,10 +395,12 @@ fake_dist_data<-0
 # 1- Initial states
 # -------------------------------------------------------------------------
 # -------------------------------------------------------------------------
+source("2_Max_spatial_projection/LHP_functions/initial_state.R")
+
 initial_Ab <- initial_state(fake_dist_data, n_s, n_n, n_p, n_t,plot=FALSE) 
 
 
-initial_Ab$imm_N_at_Len
+plot(initial_Ab$imm_N_at_Len)
 
 # -------------------------------------------------------------------------
 # -------------------------------------------------------------------------
@@ -412,10 +415,10 @@ port$lat <- 54
 port$lon<- -166.54
 
 #==this should be related to the amount of fish in a patch
-cost_fish<-10
+# cost_fish<-10
 
-cost_travel<-10000
-cost_patch<-cost_travel*distance_map + cost_fish
+# cost_travel<-10000
+# cost_patch<-cost_travel*distance_map + cost_fish
 price <- 1.5
 
 
@@ -424,20 +427,9 @@ N_quota <- 10000000
 fishers<-4
 quota <- matrix(N_quota,fishers,year_n)
 
-
+source("2_Max_spatial_projection/LHP_functions/costs_to_fish.R")
 cost_to_fish_distance <- costs_to_fish(land_mask,
                                        port_lat,
                                        port_lon,
                                        lat,
                                        lon)
-
-
-
-
-
-
-
-
-
-
-
