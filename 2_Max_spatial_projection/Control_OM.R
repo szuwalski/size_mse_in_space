@@ -35,19 +35,28 @@ attach(spatial_grid)
 
 # 0-c-Size bins -----------------------------------------------------------
 # -------------------------------------------------------------------------
-binsize  <- 35
-sizes		 <-seq(27.5,132.5,binsize)
-n_p = as.numeric(length(sizes))
+# # Original settings
+# binsize  <- 35
+# sizes		 <-seq(27.5,132.5,binsize)
+# binclass <- c(sizes - binsize / 2, sizes[length(sizes)] + binsize / 2)
+# n_p <- as.numeric(length(sizes))
+
+# Spatial IPM
+# In spatial IPM, size classes are: 0 < size1 =<40 / 40 < size 2 =< 78 / 78<size3 =<101 / 101<size4
+binclass <- c(0,40,78,101,132.5)
+sizes		 <- (binclass[1:(length(binclass) - 1)] + binclass[2:length(binclass)]) / 2
+n_p <- as.numeric(length(sizes))
+
 
 # 0-d- Years --------------------------------------------------------------
 # -------------------------------------------------------------------------
-year_step <-1 # 12 # months
-year_n	 <-1 # nber of years
-proj_period	<-seq(1,year_step*year_n)
+year_step <- 12 # months
+year_n <- 1 # nber of years
+proj_period	<- seq(1,year_step*year_n)
 n_t <- length(proj_period)
 
 #-- Years for climate scenarios
-inits_year =2022
+inits_year <- 2022
 Years_climsc_temp <- ((rep(c(inits_year:(inits_year-1+year_n)),year_step)))
 Years_climsc <- Years_climsc_temp[ order((rep(c(inits_year:(inits_year-1+year_n)),year_step)))]
 month <- seq(1,12,1)
@@ -67,7 +76,7 @@ mate_time 	  <-rep(c(0,0,0,0,0,0,0,1,0,1,0,0),year_n)
 
 # 0-e- Sex ----------------------------------------------------------------
 # -------------------------------------------------------------------------
-sexN		 <- 2
+sexN <- 2
 n_n <- sexN
 
 
@@ -131,34 +140,34 @@ n_grpar_growth = dim(growth_par_beta)[2] # number of parameter to define growth
 # --- Growth is define by 2 parameters : initial and last size increment 
 # ---- Female immature
 growth_par_beta[1,1,1] <- 3 # initial size increment  
-growth_par_beta[1,2,1] <- 15 #last size increment : mean
-growth_par_beta[1,3,1] <-  0.3 #  scale parameter of the gamma distribution used to generate the growth transition matrix 
+growth_par_beta[1,2,1] <- 15 + 15 # last size increment : mean
+growth_par_beta[1,3,1] <-  0.3 # scale parameter of the gamma distribution used to generate the growth transition matrix 
 
 growth_par_beta[2,1,1] <- 0.1 # initial size increment  : sd
-growth_par_beta[2,2,1] <- 0.1 #last size increment : sd
+growth_par_beta[2,2,1] <- 0.1 # last size increment : sd
 growth_par_beta[2,3,1] <-  NA 
 
 # ---- Female mature
 growth_par_beta[1,1,2] <- 3 # initial size increment  
-growth_par_beta[1,2,2] <- 15 #last size increment : mean
-growth_par_beta[1,3,2] <-  0.3 #  scale parameter of the gamma distribution used to generate the growth transition matrix 
+growth_par_beta[1,2,2] <- 15 + 15 # last size increment : mean
+growth_par_beta[1,3,2] <-  0.3 # scale parameter of the gamma distribution used to generate the growth transition matrix 
 
 growth_par_beta[2,1,2] <- 0.1 # initial size increment  : sd
-growth_par_beta[2,2,2] <- 0.1 #last size increment : sd
+growth_par_beta[2,2,2] <- 0.1 # last size increment : sd
 growth_par_beta[2,3,2] <-  NA 
 
 # ---- male immature
 growth_par_beta[1,1,3] <- 3 # initial size increment  
-growth_par_beta[1,2,3] <- 15 #last size increment : mean
-growth_par_beta[1,3,3] <-  0.3 #  scale parameter of the gamma distribution used to generate the growth transition matrix 
+growth_par_beta[1,2,3] <- 15 + 15 # last size increment : mean
+growth_par_beta[1,3,3] <-  0.3 # scale parameter of the gamma distribution used to generate the growth transition matrix 
 
 growth_par_beta[2,1,3] <- 0.1 # initial size increment  : sd
-growth_par_beta[2,2,3] <- 0.1 #last size increment : sd
+growth_par_beta[2,2,3] <- 0.1 # last size increment : sd
 growth_par_beta[2,3,3] <-  NA 
 
 # ---- male mature
 growth_par_beta[1,1,4] <- 3 # initial size increment  
-growth_par_beta[1,2,4] <- 15 #last size increment : mean
+growth_par_beta[1,2,4] <- 15 + 15 #last size increment : mean
 growth_par_beta[1,3,4] <-  0.3 #  scale parameter of the gamma distribution used to generate the growth transition matrix 
 
 growth_par_beta[2,1,4] <- 0.1 # initial size increment  : sd
@@ -181,7 +190,9 @@ pars_pref_hab_growth = c(4,2)
 # -------------------------------------------------------------------------
 source("2_Max_spatial_projection/LHP_functions/pars_LHP_setting.R")
 
-pars_Growth_setting_m_imm <- pars_LHP_setting(pref_hab_growth,
+Growth_spatial <- T
+
+pars_Growth_setting_m_imm <- pars_LHP_f(pref_hab_growth,
                                               pars_pref_hab_growth,
                                               x_omega,
                                               x_epsilon,
@@ -193,7 +204,7 @@ pars_Growth_setting_m_imm <- pars_LHP_setting(pref_hab_growth,
                                               n_grpar_growth,
                                               Years_climsc)
 
-pars_Growth_setting_m_mat <- pars_LHP_setting(pref_hab_growth,
+pars_Growth_setting_m_mat <- pars_LHP_f(pref_hab_growth,
                                               pars_pref_hab_growth,
                                               x_omega,
                                               x_epsilon,
@@ -205,7 +216,7 @@ pars_Growth_setting_m_mat <- pars_LHP_setting(pref_hab_growth,
                                               n_grpar_growth,
                                               Years_climsc)
 
-pars_Growth_setting_f_imm <- pars_LHP_setting(pref_hab_growth,
+pars_Growth_setting_f_imm <- pars_LHP_f(pref_hab_growth,
                                               pars_pref_hab_growth,
                                               x_omega,
                                               x_epsilon,
@@ -217,7 +228,7 @@ pars_Growth_setting_f_imm <- pars_LHP_setting(pref_hab_growth,
                                               n_grpar_growth,
                                               Years_climsc)
 
-pars_Growth_setting_f_mat <- pars_LHP_setting(pref_hab_growth,
+pars_Growth_setting_f_mat <- pars_LHP_f(pref_hab_growth,
                                               pars_pref_hab_growth,
                                               x_omega,
                                               x_epsilon,
@@ -259,35 +270,34 @@ for(t in 1:n_t){
     #pars_Growth_setting_f_mat$clim_sc <- pars_Growth_setting_f_mat$clim_sc_test[c]
     
     growth_m_imm[t,,,,] <- growth(sizes,
-                                  binsize,
+                                  binclass,
                                   pars_Growth_setting_m_imm,
+                                  n_s,
+                                  n_p,
+                                  plot = T)
+    
+    growth_m_mat[t,,,,] <- growth(sizes,
+                                  binclass,
+                                  pars_Growth_setting_m_mat,
                                   n_s,
                                   n_p,
                                   plot = F)
     
-    growth_m_mat[t,,,,] <- growth(sizes,
-                                    binsize,
-                                    pars_Growth_setting_m_mat,
-                                    n_s,
-                                    n_p,
-                                    plot = F)
-    
     growth_f_imm[t,,,,] <- growth(sizes,
-                                    binsize,
-                                    pars_Growth_setting_f_imm ,
-                                    n_s,
-                                    n_p,
-                                    plot = F)
+                                  binclass,
+                                  pars_Growth_setting_f_imm ,
+                                  n_s,
+                                  n_p,
+                                  plot = F)
     
     growth_f_mat[t,,,,] <- growth(sizes,
-                                    binsize,
-                                    pars_Growth_setting_f_mat,
-                                    n_s,
-                                    n_p,
-                                    plot = F)
+                                  binclass,
+                                  pars_Growth_setting_f_mat,
+                                  n_s,
+                                  n_p,
+                                  plot = F)
     Sys.sleep(0.1)
     setTxtProgressBar(pb,t)
-    
     
   }
 }

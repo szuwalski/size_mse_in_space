@@ -11,6 +11,12 @@ library(gdistance)
 library(raster)
 library(maps)
 library(maptools)
+
+world_sf <- ne_countries(scale = "medium", returnclass = "sf")
+
+# source("2_Max_spatial_projection/LHP_functions/libraries.R")
+
+
 #==Set model variables
 lat		   <-seq(70,51.5,-.25)
 lon		   <-seq(-179,-155,.5)
@@ -21,11 +27,42 @@ lon		   <-seq(-179,-155,length.out=40)
 #lat		   <-seq(31,29,-.05)
 #lon		   <-seq(120,124,.05)
 
-binsize  <-5
-sizes		 <-seq(27.5,132.5,binsize)
+
+## Climate scenarios 
+#------------------
+clim_sc =c("rcp45") # climate scenario to test
+
+## Size class settings
+#---------------------
+size_class_settings <- "rough"
+# either "fine" (5 cm per 5 cm like GMACS)
+# or "rough" (4 size classes accordingly to the IPM)
+# In spatial IPM, size classes are: 0 < size1 =<40 / 40 < size 2 =< 78 / 78<size3 =<101 / 101<size4
+
+# Original settings
+if(size_class_settings == "rough"){
+  binsize  <- 5
+  sizes		 <-seq(27.5,132.5,binsize)
+  binclass <- c(sizes - binsize / 2, sizes[length(sizes)] + binsize / 2)
+  n_p <- as.numeric(length(sizes))
+}
+
+if(size_class_settings == "fine"){
+  binclass <- c(0,40,78,101,132.5)
+  sizes		 <- (binclass[1:(length(binclass) - 1)] + binclass[2:length(binclass)]) / 2
+  n_p <- as.numeric(length(sizes))
+}
+
+## Time period
+#-------------
 year_n	 <-50
 year_step <-12
+Years_climsc <- rep(2022:(2022+year_n), each=year_step)
 proj_period	<-seq(1,year_step*year_n)
+n_t <- length(proj_period)
+
+## Maturity / sex
+#----------------
 sexN		 <-2
 imm_fem_M    <-0.32
 imm_male_M   <-0.32
@@ -46,8 +83,7 @@ mate_time 	  <-rep(c(0,0,0,0,0,0,0,1,0,1,0,0),year_n)
 #==designate areas of potential habitat (i.e. not land)
 
 data(wrld_simpl)
-
-## Create a SpatialPoints object
+## Create a SpatialPoinxts object
 set.seed(0)
 point_expand <- expand.grid(lon, lat)  
 pts <- SpatialPoints(point_expand, proj4string=CRS(proj4string(wrld_simpl)))
@@ -67,8 +103,17 @@ load(file="1_OM_Cody_version0/smooth_mat_N_at_Len_2017.RData") # smooth_mat
 load(file="1_OM_Cody_version0/smooth_imm_N_at_Len_2017.RData") # smooth_imm
 
 #==FIX THIS SO THAT THESE DISTRIBUTIONS ARE MADE TO TRUE DISTRIBUTIONS AND MULTIPLIED BY NUMBERS AT LENGTH FROM ASSESSMENT
-imm_N_at_Len[,,,,1]<-exp(smooth_imm)
-mat_N_at_Len[,,,,1]<-exp(smooth_mat)
+# imm_N_at_Len[,,,,1]<-exp(smooth_imm)
+# mat_N_at_Len[,,,,1]<-exp(smooth_mat)
+
+for(i in 1:length(sizes)){
+  
+  imm_N_at_Len[,,1,i,1] <- exp(smooth_imm)[,,1,i] # matrix(rnorm(n = length(lat) * length(lon),mean = 1,sd = 1),nrow = length(lat), ncol = length(lon))
+  imm_N_at_Len[,,2,i,1] <- exp(smooth_imm)[,,2,i] # matrix(rnorm(n = length(lat) * length(lon),mean = 1,sd = 1),nrow = length(lat), ncol = length(lon))
+  mat_N_at_Len[,,1,i,1] <- exp(smooth_mat)[,,1,i] # matrix(rnorm(n = length(lat) * length(lon),mean = 1,sd = 1),nrow = length(lat), ncol = length(lon))
+  mat_N_at_Len[,,2,i,1] <- exp(smooth_mat)[,,2,i] # matrix(rnorm(n = length(lat) * length(lon),mean = 1,sd = 1),nrow = length(lat), ncol = length(lon))
+  
+}
 
 imm_N_at_Len[imm_N_at_Len=="NaN"]<-0
 mat_N_at_Len[mat_N_at_Len=="NaN"]<-0
@@ -156,7 +201,14 @@ growth_sd_imm<-c(5,4)
 growth_sd_mat<-c(5,4)
 terminal_molt<-1
 
-term_molt_prob<-c(0,0,0,.1,.2,.3,.4,.4,.4,.4,.4,.75,.9,1,1,1,1,1,1,1,1,1)
+## Load growth settings
+source("4_full_MSE/LHP/growth_settings.R")
+
+## Load function for growth
+source("2_Max_spatial_projection/LHP_functions/growth.R")
+
+# term_molt_prob<-c(0,0,0,.1,.2,.3,.4,.4,.4,.4,.4,.75,.9,1,1,1,1,1,1,1,1,1)
+term_molt_prob<-c(0.01, 0.3,0.58,0.9)
 plot(term_molt_prob~sizes)
 #==fishery pars
 fish_50<-95
@@ -234,7 +286,7 @@ for(x in 1:length(lon))
       distance_map[y,x]<-costDistance(trCostC, pts[1,],pts[2,])
       if(distance_map[y,x]>10000)distance_map[y,x]<-NA
     }
-  }  
+  }
 filled.contour(x=lon,y=rev(lat),g(distance_map*land_mask),plot.axes=c(map(add=TRUE,fill=T,col='grey'),
                                                                       points(y=port_lat,x=port_lon,pch=16,col='red')))
 #write.csv(distance_map,'dist.csv')
@@ -261,9 +313,16 @@ catch_by_fisher<-array(0,dim=c(length(lat),length(lon),sexN,length(sizes),length
 profit_by_fisher<-array(0,dim=c(length(lat),length(lon),length(proj_period),fishers))
 cost_by_fisher<-array(0,dim=c(length(lat),length(lon),length(proj_period),fishers))
 
+## Dimensions note in the same order as previous ones --> fix?
+growth_m_imm <- array(0,dim=c(n_t,length(lon),length(lat),n_p,n_p))
+growth_m_mat <- array(0,dim=c(n_t,length(lon),length(lat),n_p,n_p))
+growth_f_imm <- array(0,dim=c(n_t,length(lon),length(lat),n_p,n_p))
+growth_f_mat <- array(0,dim=c(n_t,length(lon),length(lat),n_p,n_p))
+
+
 #==indices: lat,lon,sex,size,time
-for(t in 1:(length(proj_period)-1))
-  #for(t in 1:320)
+# for(t in 1:(length(proj_period)-1))
+for(t in 1:9)
 {
   #==create a 'working' array for a given time step of both mature and immature critters
   
@@ -314,8 +373,11 @@ for(t in 1:(length(proj_period)-1))
       # 
       #========================================================
       #==subtract catch from locations while quota is remaining
+      index <- 0
       while(quota_remaining>0.1 & net_benefit_patch[chosen_patch[1],chosen_patch[2]]>0)
       {
+        print(index)
+        index <- index + 1
         #==find closest, highest value, fishable patch
         max_net_benefit<-which(net_benefit_patch==max(net_benefit_patch,na.rm=T),arr.ind=T)
         #==have to do this if there are two patches with identical net benefits
@@ -449,12 +511,16 @@ for(t in 1:(length(proj_period)-1))
   
   if( molt_time[1,t]==1 | molt_time[2,t]==1 )
   {
+    
+    source("4_full_MSE/LHP/growth_t.R")
+    
     # bot_temp_dat<-read.csv(paste("temp_data/bot_temp_",time,".csv",sep=""),header=T)
     for(x in 1:nrow(imm_N_at_Len[,,,,t]))
       for(y in 1:ncol(imm_N_at_Len[,,,,t]))
       {
         if(land_mask[x,y]!=0)
         {
+      
           #==this is where Max's maps could be implemented
           #==plug temp into growth curve
           f_postmolt_imm<-alpha_grow_f_imm + beta_grow_f_imm*sizes
@@ -580,6 +646,7 @@ for(t in 1:(length(proj_period)-1))
   mat_N_at_Len[,,1,,t+1] <-  temp_mat_N[,,1,]*exp(-mat_fem_M*1/year_step)
   mat_N_at_Len[,,2,,t+1] <-  temp_mat_N[,,2,]*exp(-mat_male_M*1/year_step)
   
+  print(t)
   
 }
 

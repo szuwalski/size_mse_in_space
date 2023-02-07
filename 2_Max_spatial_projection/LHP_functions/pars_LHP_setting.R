@@ -1,4 +1,4 @@
-pars_LHP_setting <-
+pars_LHP_f <-
   function (pref_hab,
             pars_pref_hab,
             x_omega,
@@ -20,7 +20,7 @@ pars_LHP_setting <-
       "pars_pref_hab" = pars_pref_hab,
       "x_omega" = x_omega,
       "x_epsilon" = x_epsilon,
-      "binsize" = binsize,
+      "binclass" = binclass,
       "sizes" = sizes,
       "scale_g" = scale_g,
       "LHP" = LHP,

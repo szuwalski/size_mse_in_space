@@ -1,13 +1,12 @@
 
 
 growth <- function(sizes,
-                   binsize,
+                   binclass,
                    pars_LHP_setting,
                    n_s,n_p,
+                   G_spatial=F,
                    plot=FALSE
                    ){
-
-  
 
 #-- Map of growth matrix
 growth_matrix = array (data = 0, dim = c(n_s,n_p,n_p))
@@ -20,19 +19,19 @@ if (!pars_LHP_setting$LHP_spatial) {
   for (k in 1:n_s) {
     growth_matrix[k, ,] = growth_trans(sizes,
                                        pars_LHP_setting$pars_LHP[1,2],
-                                       pars_LHP_setting$pars_LHP[1, 1],
+                                       pars_LHP_setting$pars_LHP[1,1],
                                        sizes[1],
                                        sizes[n_p],
-                                       binsize,
+                                       binclass,
                                        pars_LHP_setting$pars_LHP[1,3] )
   }
   
 }else{
-  
+
 # -- Space  
 source("2_Max_spatial_projection/LHP_functions/pars_LHP_map.R")  
   
-  growth_par <- array(0, c(n_s,pars_LHP_setting$n_grpar)) 
+  growth_par <- array(0, c(n_s,pars_LHP_setting$n_grpar))
   for (i in 1:(pars_LHP_setting$n_grpar - 1)) {
     par <- pars_LHP_map(
       pars_LHP_setting$pref_hab,
@@ -58,23 +57,22 @@ source("2_Max_spatial_projection/LHP_functions/pars_LHP_map.R")
   
   for (k in 1:n_s) {
     growth_matrix[k, , ] = growth_trans(sizes,
-                                        growth_par[k, 2],
                                         growth_par[k, 1],
+                                        growth_par[k, 2],
                                         sizes[1],
                                         sizes[n_p],
-                                        binsize,
+                                        binclass,
                                         growth_par[k, 3])
   }
 }
 
 # match lat/lon with cell number
 Growth_temp <- melt(growth_matrix)
-colnames(Growth_temp) <- c("cell","Size_class_from","Size_class_to", "prob") 
+colnames(Growth_temp) <- c("cell","Size_class_from","Size_class_to", "prob")
 Growth_temp <- data.frame(Growth_temp)
 
 Growth_temp$Size_class_from <- as.factor(Growth_temp$Size_class_from)
 Growth_temp$Size_class_to <- as.factor(Growth_temp$Size_class_to)
-
 
 Cell <- data.frame(cell = loc_x[,1], lat=loc_x[,3],lon=loc_x[,2])
 Growth <- left_join(Growth_temp,Cell,by = "cell")
@@ -87,27 +85,27 @@ colnames(lat2) <- c("lat","cell")
 Growth_temp2 <- left_join(Growth, lon2,by = c("cell", "lon"))
 Growth_temp3 <- left_join(Growth_temp2, lat2,by = c("cell", "lat"))
 
-
 if(plot==TRUE){
+  
   # Plot
   p <- ggplot(Growth_temp %>% filter(cell %in% c(seq(1,1000,100))), aes(Size_class_from, Size_class_to, fill= prob)) + 
-    geom_tile()+scale_fill_viridis() +  theme_bw()
+    geom_tile()+scale_fill_viridis() + theme_bw()
   
   if (!G_spatial) {p_size_trans <- p }else{ p_size_trans <- p + facet_wrap(~cell)}
   
-  ggsave((paste0(DateFile, '/Growth_size_trans.png')),plot=p_size_trans,
-         width = 27,
-         height = 18,
-         units = "cm")
-
-p <- ggplot() +   geom_raster(Growth_temp2 %>% filter(Size_class_from==1), mapping=aes(lon, lat, fill= prob))+
-  scale_fill_viridis() +  
-  theme_bw()+ 
-  geom_sf(data = world_sf,fill="black",color=NA)+ 
-  coord_sf(xlim=range(loc_x$lon), ylim=range((loc_x$lat)))
-
-plot(p + facet_wrap(~Size_class_to))
-
+  # ggsave((paste0(DateFile, '/Growth_size_trans.png')),plot=p_size_trans,
+  #        width = 27,
+  #        height = 18,
+  #        units = "cm")
+  
+  p <- ggplot() +   geom_raster(Growth_temp2, mapping=aes(lon, lat, fill= prob))+
+    scale_fill_viridis() +  
+    theme_bw()+ 
+    geom_sf(data = world_sf,fill="black",color=NA)+ 
+    coord_sf(xlim=range(loc_x$lon), ylim=range((loc_x$lat)))
+  
+  plot(p + facet_wrap(~Size_class_from + Size_class_to,nrow = n_p,ncol = n_p,))
+  
 }
 
 # Format for pop. dyn model

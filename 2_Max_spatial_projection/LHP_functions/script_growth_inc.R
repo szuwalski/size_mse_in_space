@@ -1,20 +1,47 @@
-growth_trans  <- function(sizes,m_last , m_first, L_first, L_last, binsize,beta_scale){
+# growth_trans  <- function(sizes,m_last , m_first, L_first, L_last, binsize,beta_scale){
+# 
+#   # L_first=sizes[1]
+#   # L_last=sizes[n_p]
+#   # m_first= 30
+#   # m_last=growth_par[k,1]
+#   # beta_scale=growth_par[k, 3]
+#   
+#   growmat <- matrix(0, nrow = n_p, ncol = n_p)
+#   for (i in 1:n_p){
+#     mean_gamma <- sizes[i] + m_first + (m_last-m_first) * (sizes[i]-L_first)/(L_last- L_first)
+#     alpha = mean_gamma/beta_scale
+#     for (k in i:n_p){
+#       
+#       growmat[i,k] = pgamma((sizes[k]+binsize/2),alpha,scale=beta_scale)-pgamma((sizes[k]-binsize/2),alpha,scale=beta_scale)
+#       
+#     }
+#   }
+#   growmat <- growmat/rowSums(growmat, na.rm = T)
+#   return(growmat)
+# }
 
-  #L_first=sizes[1]
-  #L_last=sizes[n_p]
-  #m_first= growth_par[k,1]
-  #m_last =growth_par[k,2]
-  
+
+growth_trans  <- function(sizes,m_last , m_first, L_first, L_last, binclass,beta_scale){
+
+  # L_first=sizes[1]
+  # L_last=sizes[n_p]
+  # m_first=growth_par[k,2]
+  # m_last=growth_par[k,1]
+  # beta_scale=growth_par[k, 3]
+
+  # For some intuitions about the formulas, see https://www.sciencedirect.com/science/article/pii/S0165783614003324
   growmat <- matrix(0, nrow = n_p, ncol = n_p)
   for (i in 1:n_p){
-    mean <- sizes[i] + m_first + (m_last-m_first)* (sizes[i]-L_first)/(L_last- L_first)
-    alpha = mean/beta_scale
+    mean_gamma <- sizes[i] + m_first + (m_last-m_first) * (sizes[i]-L_first)/(L_last- L_first)
+    alpha = mean_gamma/beta_scale
     for (k in i:n_p){
-      growmat[i,k] = pgamma((sizes[k]+binsize/2),alpha,scale=beta_scale)-pgamma((sizes[k]-binsize/2),alpha,scale=beta_scale)
+
+      binsize <- binclass[k+1] - binclass[k]
+      # growmat[i,k] = pgamma((sizes[k]+binsize/2),shape = alpha,scale=beta_scale)-pgamma((sizes[k]-binsize/2),alpha,scale=beta_scale)
+      growmat[i,k] = pgamma(binclass[k+1],shape = alpha,scale=beta_scale)-pgamma(binclass[k],alpha,scale=beta_scale)
+
     }
   }
   growmat <- growmat/rowSums(growmat, na.rm = T)
   return(growmat)
 }
-
-
