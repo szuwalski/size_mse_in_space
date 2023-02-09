@@ -18,7 +18,7 @@ growth_m_imm[t,,,,] <- growth(sizes,
                               n_s,
                               n_p,
                               G_spatial,
-                              plot = T)
+                              plot = F)
 
 growth_m_mat[t,,,,] <- growth(sizes,
                               binclass,
