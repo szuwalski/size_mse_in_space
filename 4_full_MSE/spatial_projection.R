@@ -11,6 +11,8 @@ library(gdistance)
 library(maps)
 library(maptools)
 library(raster)
+library(rnaturalearth)
+library(reshape2)
 library(tidyverse)
 
 world_sf <- ne_countries(scale = "medium", returnclass = "sf")
@@ -30,7 +32,7 @@ lon		   <-seq(-179,-155,length.out=40)
 
 
 ## Climate scenarios 
-#------------------
+#-------------------
 clim_sc =c("rcp45") # climate scenario to test
 
 ## Size class settings
@@ -57,13 +59,10 @@ if(size_class_settings == "rough"){
 ## Stock assessment
 #------------------
 SA <- "spatialIPM"
-wd_other.projects <- "C:/Users/test/Desktop/postdoc_projects/codes/" # When the mse loop and SA are good, this should be deleted and SA should be moved to this project
-project_spatialIPM <- "Spatial_snow_crab_2021"
+project_spatialIPM <- "../Spatial_snow_crab_2021/" # to go to working directory related to spatial IPM
 # "spatialIPM": spatially-explicit model IPM
 # "nonspatialIPM": non spatial model IPM
 # "GMACS": standard stock assessment model
-
-project_path <- getwd()
 
 ## Time period
 #-------------
@@ -208,9 +207,7 @@ for(x in 1:length(proj_period))
 # Population processes 
 #==========================
 #==growth pars from Olmos et al. and Cao et al.
-setwd(paste0(wd_other.projects,"/",project_spatialIPM))
-load("02_transformed_data/growth/growth_trans.RData")
-setwd(project_path)
+load(paste0(project_spatialIPM,"/02_transformed_data/growth/growth_trans.RData"))
 
 #==growth pars for generation of non spatially varying growth parameters (DEPRECATED)
 alpha_grow_f_imm<-4
@@ -633,10 +630,8 @@ for(t in 1:n_t)
   
   if(SA == "spatialIPM"){
     
-    setwd(paste0(wd_other.projects,"/",project_spatialIPM))
-    source("03_spatial_model/run_model_mse.R")
-    setwd(project_path)
-    
+    source(paste0(project_spatialIPM,"03_spatial_model/run_model_mse.R"))
+
   }
   
   if(SA == "nonspatialIPM"){
