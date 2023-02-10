@@ -262,6 +262,11 @@ fish_sel<-rbind(1/(1+exp(-log(19)*(sizes-fish_sel_50_f)/(fish_sel_95_f-fish_sel_
                 1/(1+exp(-log(19)*(sizes-fish_sel_50_m)/(fish_sel_95_m-fish_sel_50_m))))
 fish_sel[is.na(fish_sel)]<-0
 
+#==Scientific data (for fishing positions)
+load(paste0(project_spatialIPM,'02_transformed_data/survey/Data_Geostat_4class.RData'))
+ggplot(Data_Geostat)+
+  geom_point(aes(x=Lat,y=Lon))
+
 #==this function sets a dispersal kernel for every cell          
 #==sd is 'one grid square'  
 #source("movArray.R")
@@ -620,6 +625,10 @@ for(t in 1:n_t)
   imm_N_at_Len[,,2,,t+1] <-  temp_imm_N[,,2,]*exp(-imm_male_M*1/year_step)
   mat_N_at_Len[,,1,,t+1] <-  temp_mat_N[,,1,]*exp(-mat_fem_M*1/year_step)
   mat_N_at_Len[,,2,,t+1] <-  temp_mat_N[,,2,]*exp(-mat_male_M*1/year_step)
+  
+  
+  #==generate scientific data based on existing data
+  Data_Geostat
   
   
   #==Stock assessment
