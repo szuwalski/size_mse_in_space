@@ -20,26 +20,19 @@ world_sf <- ne_countries(scale = "medium", returnclass = "sf")
 
 # source("2_Max_spatial_projection/LHP_functions/libraries.R")
 
-
 #==Set model variables
 DateFile = paste0(getwd(), "/2_Max_spatial_projection/Outputs/")
 if(!dir.exists(DateFile)) dir.create(DateFile)
 
 #-- Define grid to predict the Field
-lat		   <- round(seq(70,51.5,length.out=40),2)
-lon <-  round(seq(-179,-155,length.out=40),2)
+lat		   <-seq(70,51.5,length.out=40)
+lon		   <-seq(-179,-155,length.out=40)
 n_lat <- length(lat)
 n_lon <- length(lon)
 
 source("2_Max_spatial_projection/LHP_functions/spatial_grid.R")
 spatial_grid <- spatial_grid(lon,lat)
 attach(spatial_grid)
-
-#lat		   <-seq(38,22,-.25)
-#lon		   <-seq(115,135,.5)
-#lat		   <-seq(31,29,-.05)
-#lon		   <-seq(120,124,.05)
-
 
 ## Climate scenarios 
 #-------------------
@@ -758,7 +751,7 @@ for(t in 1:n_t)
   
   
   #==generate scientific data based on existing data
-  Data_Geostat
+  # Data_Geostat
   
   
   #==Stock assessment
