@@ -235,8 +235,8 @@ for(x in 1:length(lon))
       if(distance_map[y,x]>10000)distance_map[y,x]<-NA
     }
   }  
-filled.contour(x=lon,y=rev(lat),g(distance_map*land_mask),plot.axes=c(map(add=TRUE,fill=T,col='grey'),
-                                                                      points(y=port_lat,x=port_lon,pch=16,col='red')))
+# filled.contour(x=lon,y=rev(lat),g(distance_map*land_mask),plot.axes=c(map(add=TRUE,fill=T,col='grey'),
+#                                                                       points(y=port_lat,x=port_lon,pch=16,col='red')))
 #write.csv(distance_map,'dist.csv')
 
 
@@ -265,6 +265,7 @@ cost_by_fisher<-array(0,dim=c(length(lat),length(lon),length(proj_period),fisher
 for(t in 1:(length(proj_period)-1))
   #for(t in 1:320)
 {
+  print(t)
   #==create a 'working' array for a given time step of both mature and immature critters
   
   temp_imm_N<-imm_N_at_Len[,,,,t]
@@ -326,13 +327,21 @@ for(t in 1:(length(proj_period)-1))
         for(sex in 1:2)
           for(x in 1:length(sizes))
           {
+            
+            print(paste0("sex=",sex," | sizes=",x," | ",
+                         " | temp_imm_N=",temp_imm_N[chosen_patch[1],chosen_patch[2],sex,x],
+                         " | temp_mat_N=",temp_imm_N[chosen_patch[1],chosen_patch[2],sex,x],
+                         " | potential catch= ",potential_catch))
             potential_catch<-potential_catch + temp_imm_N[chosen_patch[1],chosen_patch[2],sex,x]*fish_sel[sex,x]*wt_at_len[sex,x] + 
               temp_mat_N[chosen_patch[1],chosen_patch[2],sex,x]*fish_sel[sex,x]*wt_at_len[sex,x]
           }
         
         #==patch has less than needed to fill quota
         if(potential_catch<=quota_remaining)
-        { 
+        {
+          
+          print(paste0("potential_catch<=quota_remaining | potential_catch=",potential_catch,"| quota_remaining=",quota_remaining,"| use_harv=",use_harv))
+          
           for(sex in 1:2)
             for(x in 1:length(sizes))
             {
@@ -361,6 +370,7 @@ for(t in 1:(length(proj_period)-1))
         #==patch has more than needed to fill quota
         if(potential_catch>quota_remaining)
         {
+          
           #==find harvest rate that would fill quota
           maxHarv<-1
           minHarv<-.0000001
@@ -380,6 +390,9 @@ for(t in 1:(length(proj_period)-1))
             if(temp_cat>quota_remaining)
               maxHarv<-use_harv
           }
+          
+          print(paste0("potential_catch<=quota_remaining | potential_catch=",potential_catch,"| quota_remaining=",quota_remaining,"| use_harv=",use_harv))
+          
           
           temp_catch<-0
           for(sex in 1:2)
