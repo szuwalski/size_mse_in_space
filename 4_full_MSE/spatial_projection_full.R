@@ -331,8 +331,15 @@ port_lon<- -166.54
 load("4_full_MSE/")
 
 cost<-raster(nrow=length(lat), ncol=length(lon), 
+<<<<<<< HEAD
+             xmn=min(lon), xmx=max(lon), ymn=min(lat), ymx=max(lat), crs="+proj=utm")
+
+save(data = cost, "/4_full_MSE/")
+
+=======
              xmn=min(lon), xmx=max(lon), ymn=min(lat), ymx=max(lat),
              crs="+proj=utm")
+>>>>>>> 41b62322f3a6f98b77d6b408267b35741d5748a7
 cost[]<-1
 for(x in 1:nrow(cost))
   for(y in 1:ncol(cost))
