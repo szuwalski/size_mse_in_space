@@ -20,19 +20,26 @@ world_sf <- ne_countries(scale = "medium", returnclass = "sf")
 
 # source("2_Max_spatial_projection/LHP_functions/libraries.R")
 
+
 #==Set model variables
 DateFile = paste0(getwd(), "/2_Max_spatial_projection/Outputs/")
 if(!dir.exists(DateFile)) dir.create(DateFile)
 
 #-- Define grid to predict the Field
-lat		   <-seq(70,51.5,length.out=40)
-lon		   <-seq(-179,-155,length.out=40)
+lat		   <- round(seq(70,51.5,length.out=40),2)
+lon <-  round(seq(-179,-155,length.out=40),2)
 n_lat <- length(lat)
 n_lon <- length(lon)
 
 source("2_Max_spatial_projection/LHP_functions/spatial_grid.R")
 spatial_grid <- spatial_grid(lon,lat)
 attach(spatial_grid)
+
+#lat		   <-seq(38,22,-.25)
+#lon		   <-seq(115,135,.5)
+#lat		   <-seq(31,29,-.05)
+#lon		   <-seq(120,124,.05)
+
 
 ## Climate scenarios 
 #-------------------
@@ -138,11 +145,15 @@ if(size_class_settings=="fine"){
 
 if(size_class_settings=="rough"){
   
-  imm_N_at_Len[,,1,i,1] <- exp(smooth_imm)[,,1,i]*15.5 # matrix(rnorm(n = length(lat) * length(lon),mean = 1,sd = 1),nrow = length(lat), ncol = length(lon))
-  imm_N_at_Len[,,2,i,1] <- exp(smooth_imm)[,,2,i]*15.5 # matrix(rnorm(n = length(lat) * length(lon),mean = 1,sd = 1),nrow = length(lat), ncol = length(lon))
-  mat_N_at_Len[,,1,i,1] <- exp(smooth_mat)[,,1,i]*15.5 # matrix(rnorm(n = length(lat) * length(lon),mean = 1,sd = 1),nrow = length(lat), ncol = length(lon))
-  mat_N_at_Len[,,2,i,1] <- exp(smooth_mat)[,,2,i]*15.5 # matrix(rnorm(n = length(lat) * length(lon),mean = 1,sd = 1),nrow = length(lat), ncol = length(lon))
   
+  for(i in 1:4){
+    
+    imm_N_at_Len[,,1,i,1] <- exp(smooth_imm)[,,1,i]*15.5 # matrix(rnorm(n = length(lat) * length(lon),mean = 1,sd = 1),nrow = length(lat), ncol = length(lon))
+    imm_N_at_Len[,,2,i,1] <- exp(smooth_imm)[,,2,i]*15.5 # matrix(rnorm(n = length(lat) * length(lon),mean = 1,sd = 1),nrow = length(lat), ncol = length(lon))
+    mat_N_at_Len[,,1,i,1] <- exp(smooth_mat)[,,1,i]*15.5 # matrix(rnorm(n = length(lat) * length(lon),mean = 1,sd = 1),nrow = length(lat), ncol = length(lon))
+    mat_N_at_Len[,,2,i,1] <- exp(smooth_mat)[,,2,i]*15.5 # matrix(rnorm(n = length(lat) * length(lon),mean = 1,sd = 1),nrow = length(lat), ncol = length(lon))
+  
+  }
 }
 
 imm_N_at_Len[imm_N_at_Len=="NaN"]<-0

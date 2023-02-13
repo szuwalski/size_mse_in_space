@@ -7,6 +7,9 @@ rm(list=ls())
 #==size dependent molting?
 #==or start the model at the point that they are already only molting once a year
 #==and the size they enter the model change based on the temperature during the time period
+
+source("2_Max_spatial_projection/LHP_functions/libraries.R")
+
 library(gdistance)
 library(maps)
 library(maptools)
@@ -18,6 +21,13 @@ library(tidyverse)
 
 world_sf <- ne_countries(scale = "medium", returnclass = "sf")
 
+print_messages <- F
+
+# Paths
+project_spatialIPM <- "../Spatial_snow_crab_2021/" # to go to working directory related to spatial IPM
+DateFile = paste0(getwd(), "/2_Max_spatial_projection/Outputs/")
+if(!dir.exists(DateFile)) dir.create(DateFile)
+
 ## Spatial extent
 #----------------
 lat		   <-seq(70,51.5,length.out=40)
@@ -27,19 +37,36 @@ source("2_Max_spatial_projection/LHP_functions/spatial_grid.R")
 spatial_grid <- spatial_grid(lon,lat)
 attach(spatial_grid)
 
+# designate areas of potential habitat (i.e. not land)
+data(wrld_simpl)
+point_expand <- expand.grid(lon, lat)  
+pts <- SpatialPoints(point_expand, proj4string=CRS(proj4string(wrld_simpl)))
+proj4string(wrld_simpl)<-CRS(proj4string(pts))
+## Find which points fall over land
+land <- !is.na(over(pts, wrld_simpl)$FIPS)
+
+# ## Check
+# plot(wrld_simpl,xlim = c(min(lon), max(lon)), ylim = c(min(lat),max(lat)))
+# points(pts, col=1+land, pch=16)
+
+
 ## Climate scenarios 
 #-------------------
 clim_sc =c("rcp45") # climate scenario to test
+
 
 ## Projection period
 #-------------------
 year_n	 <-50
 year_step <-12
 proj_period	<-seq(1,year_step*year_n)
+Years_climsc <- rep(2022:(2022+year_n), each=year_step)
+n_t <- length(proj_period)
+
 
 ## Size class settings
 #---------------------
-size_class_settings <- "fine"
+size_class_settings <- "rough"
 # either "fine" (5 cm per 5 cm like GMACS)
 # or "rough" (4 size classes accordingly to the IPM)
 # In spatial IPM, size classes are: 0 < size1 =<40 / 40 < size 2 =< 78 / 78<size3 =<101 / 101<size4
@@ -59,6 +86,8 @@ if(size_class_settings == "rough"){
 }
 
 
+## Sex and maturity
+#------------------
 sexN		 <-2
 imm_fem_M    <-0.32
 imm_male_M   <-0.32
@@ -67,6 +96,18 @@ mat_male_M   <-0.28
 rec_sizes    <-5
 prop_rec     <-c(.25,.4,.25,.075,0.025)
 
+if(size_class_settings == "rough"){
+  rec_sizes    <-1
+  prop_rec     <-1
+}
+
+if(size_class_settings == "fine"){
+  rec_sizes    <-5
+  prop_rec     <-c(.25,.4,.25,.075,0.025)
+}
+
+## Seasonality
+#-------------
 #==Binary vectors related to period that determine when life events happen
 #==July,Aug,Sept,Oct,Nov,Dec,Jan,Feb,Mar,Apr,May,Jun
 survey_time   <-rep(c(1,0,0,0,0,0,0,0,0,0,0,0),year_n)
@@ -76,23 +117,21 @@ move_time		  <-rep(c(1,1,1,1,1,1,1,1,1,1,1,1),year_n)
 molt_time  	  <-rbind(rep(c(0,0,0,0,0,0,0,0,0,1,0,0),year_n),rep(c(0,0,0,0,0,0,0,0,0,1,0,0),year_n)) # females first, males second
 mate_time 	  <-rep(c(0,0,0,0,0,0,0,1,0,1,0,0),year_n)
 
-#==designate areas of potential habitat (i.e. not land)
+## Load survey data for sampling locations
+load(paste0(project_spatialIPM,'02_transformed_data/survey/Data_Geostat_4class.RData'))
 
-data(wrld_simpl)
 
-## Create a SpatialPoints object
-set.seed(0)
-point_expand <- expand.grid(lon, lat)  
-pts <- SpatialPoints(point_expand, proj4string=CRS(proj4string(wrld_simpl)))
-proj4string(wrld_simpl)<-CRS(proj4string(pts))
-## Find which points fall over land
-land <- !is.na(over(pts, wrld_simpl)$FIPS)
+## Stock assessment
+#------------------
+SA <- "spatialIPM"
+# "spatialIPM": spatially-explicit model IPM
+# "nonspatialIPM": non spatial model IPM
+# "GMACS": standard stock assessment model
 
-## Check that it worked
-plot(wrld_simpl,xlim = c(min(lon), max(lon)), ylim = c(min(lat),max(lat)))
-points(pts, col=1+land, pch=16)
 
-#==need to track numbers at size by sex by maturity by location
+## Matrices of abundance at size
+#-------------------------------
+## need to track numbers at size by sex by maturity by location
 imm_N_at_Len<-array(dim=c(length(lat),length(lon),sexN,length(sizes),length(proj_period)))
 mat_N_at_Len<-array(dim=c(length(lat),length(lon),sexN,length(sizes),length(proj_period)))
 
@@ -100,14 +139,31 @@ load(file="1_OM_Cody_version0/smooth_mat_N_at_Len_2017.RData") # smooth_mat
 load(file="1_OM_Cody_version0/smooth_imm_N_at_Len_2017.RData") # smooth_imm
 
 #==FIX THIS SO THAT THESE DISTRIBUTIONS ARE MADE TO TRUE DISTRIBUTIONS AND MULTIPLIED BY NUMBERS AT LENGTH FROM ASSESSMENT
-imm_N_at_Len[,,,,1]<-exp(smooth_imm)
-mat_N_at_Len[,,,,1]<-exp(smooth_mat)
+if(size_class_settings=="fine"){
+  imm_N_at_Len[,,,,1]<-exp(smooth_imm)
+  mat_N_at_Len[,,,,1]<-exp(smooth_mat)
+}
+
+if(size_class_settings=="rough"){
+  
+  for(i in 1:4){
+    
+    imm_N_at_Len[,,1,i,1] <- exp(smooth_imm)[,,1,i] # matrix(rnorm(n = length(lat) * length(lon),mean = 1,sd = 1),nrow = length(lat), ncol = length(lon))
+    imm_N_at_Len[,,2,i,1] <- exp(smooth_imm)[,,2,i] # matrix(rnorm(n = length(lat) * length(lon),mean = 1,sd = 1),nrow = length(lat), ncol = length(lon))
+    mat_N_at_Len[,,1,i,1] <- exp(smooth_mat)[,,1,i] # matrix(rnorm(n = length(lat) * length(lon),mean = 1,sd = 1),nrow = length(lat), ncol = length(lon))
+    mat_N_at_Len[,,2,i,1] <- exp(smooth_mat)[,,2,i] # matrix(rnorm(n = length(lat) * length(lon),mean = 1,sd = 1),nrow = length(lat), ncol = length(lon))
+    
+  }
+  
+  
+}
 
 imm_N_at_Len[imm_N_at_Len=="NaN"]<-0
 mat_N_at_Len[mat_N_at_Len=="NaN"]<-0
 
 imm_N_at_Len[imm_N_at_Len<0]<-0
 mat_N_at_Len[mat_N_at_Len<0]<-0
+
 
 #==This makes up a random distribution for the population
 #==only used for testing
@@ -174,29 +230,67 @@ for(x in 1:length(proj_period))
 #==========================
 # Population processes 
 #==========================
-#==growth pars
-alpha_grow_f_imm<-4
-alpha_grow_m_imm<-7
-beta_grow_f_imm<-1.05
-beta_grow_m_imm<-1.1
+## Growth
+#--------
+growth_model <- "max_model" # "max_model" "cody_model"
+# Cody's model --> non-spatial life-history parameters
+# Maxime's model --> spatially varying life-history parameters
 
-alpha_grow_f_mat<-4
-alpha_grow_m_mat<-7
-beta_grow_f_mat<-1.05
-beta_grow_m_mat<-1.1
+if(growth_model == "cody_model"){
+  
+  #==Cody's growth parameterization for generation of non spatially varying growth parameters
+  alpha_grow_f_imm<-4
+  alpha_grow_m_imm<-7
+  beta_grow_f_imm<-1.05
+  beta_grow_m_imm<-1.1
+  
+  alpha_grow_f_mat<-4
+  alpha_grow_m_mat<-7
+  beta_grow_f_mat<-1.05
+  beta_grow_m_mat<-1.1
+  
+  growth_sd_imm<-c(5,4)
+  growth_sd_mat<-c(5,4)
 
-growth_sd_imm<-c(5,4)
-growth_sd_mat<-c(5,4)
+}
+
+
+if(growth_model == "max_model"){
+  
+  #==Maxime's growth parameterization
+  ## Load growth settings for spatially varying parameters
+  G_spatial <- F 
+  Growth_spatial <- F # are life history parameters spatial?
+  source("4_full_MSE/LHP/growth_settings.R")
+  
+  ## Load function for growth
+  source("2_Max_spatial_projection/LHP_functions/growth.R")
+  
+  ## Dimensions note in the same order as Cody's codes --> fix?
+  growth_m_imm <- array(0,dim=c(n_t,length(lon),length(lat),n_p,n_p))
+  growth_m_mat <- array(0,dim=c(n_t,length(lon),length(lat),n_p,n_p))
+  growth_f_imm <- array(0,dim=c(n_t,length(lon),length(lat),n_p,n_p))
+  growth_f_mat <- array(0,dim=c(n_t,length(lon),length(lat),n_p,n_p))
+  
+}
+
 terminal_molt<-1
 
-term_molt_prob<-c(0,0,0,.1,.2,.3,.4,.4,.4,.4,.4,.75,.9,1,1,1,1,1,1,1,1,1)
+
+## Molting probability
+if(size_class_settings == "fine") term_molt_prob<-c(0,0,0,.1,.2,.3,.4,.4,.4,.4,.4,.75,.9,1,1,1,1,1,1,1,1,1)
+if(size_class_settings == "rough") term_molt_prob<-c(0.01, 0.3,0.58,0.9)
 plot(term_molt_prob~sizes)
-#==fishery pars
+
+
+## fishery pars
+#--------------
 fish_50<-95
 fish_95<-101
 fish_sel<-1/(1+exp(-log(19)*(sizes-fish_50)/(fish_95-fish_50)))
 
-#==weight at length parameters
+## weight at length parameters
+#-----------------------------
 weight_a_f<-0.001
 weight_b_f<-3
 
@@ -205,11 +299,13 @@ weight_b_m<-3
 
 wt_at_len<-rbind(weight_a_f*sizes^weight_b_f,weight_a_m*sizes^weight_b_m)  
 
-#==movement at size
+## Movement at size
+#------------------
 move_len_50<-60
 move_len_95<-70
 
-#==fishery selectivity
+## Fishery selectivity
+#---------------------
 fish_sel_50_f<-NA
 fish_sel_95_f<-NA
 fish_sel_50_m<-99
@@ -361,10 +457,10 @@ for(t in 1:(length(proj_period)-1))
           for(x in 1:length(sizes))
           {
             
-            print(paste0("sex=",sex," | sizes=",x," | ",
-                         " | temp_imm_N=",temp_imm_N[chosen_patch[1],chosen_patch[2],sex,x],
-                         " | temp_mat_N=",temp_imm_N[chosen_patch[1],chosen_patch[2],sex,x],
-                         " | potential catch= ",potential_catch))
+            if(print_messages) print(paste0("sex=",sex," | sizes=",x," | ",
+                                            " | temp_imm_N=",temp_imm_N[chosen_patch[1],chosen_patch[2],sex,x],
+                                            " | temp_mat_N=",temp_imm_N[chosen_patch[1],chosen_patch[2],sex,x],
+                                            " | potential catch= ",potential_catch))
             potential_catch<-potential_catch + temp_imm_N[chosen_patch[1],chosen_patch[2],sex,x]*fish_sel[sex,x]*wt_at_len[sex,x] + 
               temp_mat_N[chosen_patch[1],chosen_patch[2],sex,x]*fish_sel[sex,x]*wt_at_len[sex,x]
           }
@@ -373,7 +469,7 @@ for(t in 1:(length(proj_period)-1))
         if(potential_catch<=quota_remaining)
         {
           
-          print(paste0("potential_catch<=quota_remaining | potential_catch=",potential_catch,"| quota_remaining=",quota_remaining,"| use_harv=",use_harv))
+          if(print_messages) print(paste0("potential_catch<=quota_remaining | potential_catch=",potential_catch,"| quota_remaining=",quota_remaining,"| use_harv=",use_harv))
           
           for(sex in 1:2)
             for(x in 1:length(sizes))
@@ -424,7 +520,7 @@ for(t in 1:(length(proj_period)-1))
               maxHarv<-use_harv
           }
           
-          print(paste0("potential_catch<=quota_remaining | potential_catch=",potential_catch,"| quota_remaining=",quota_remaining,"| use_harv=",use_harv))
+          if(print_messages) print(paste0("potential_catch<=quota_remaining | potential_catch=",potential_catch,"| quota_remaining=",quota_remaining,"| use_harv=",use_harv))
           
           
           temp_catch<-0
@@ -495,85 +591,142 @@ for(t in 1:(length(proj_period)-1))
   
   if( molt_time[1,t]==1 | molt_time[2,t]==1 )
   {
+    
+    if(growth_model == "cody_model"){
+      
+      if(print_messages) print("growth Max")
+      source("4_full_MSE/LHP/growth_t.R")
+      
+    }
+    
+    
     # bot_temp_dat<-read.csv(paste("temp_data/bot_temp_",time,".csv",sep=""),header=T)
     for(x in 1:nrow(imm_N_at_Len[,,,,t]))
       for(y in 1:ncol(imm_N_at_Len[,,,,t]))
       {
-        if(land_mask[x,y]!=0)
-        {
-          #==this is where Max's maps could be implemented
-          #==plug temp into growth curve
-          f_postmolt_imm<-alpha_grow_f_imm + beta_grow_f_imm*sizes
-          m_postmolt_imm<-alpha_grow_m_imm + beta_grow_m_imm*sizes
-          f_postmolt_mat<-alpha_grow_f_mat + beta_grow_f_mat*sizes
-          m_postmolt_mat<-alpha_grow_m_mat + beta_grow_m_mat*sizes
+        
+        if(growth_model == "cody_model"){
           
-          #======================================
-          #==make size transition matrix immature
-          size_transition_mat_m_imm<-matrix(ncol=length(sizes),nrow=length(sizes))
-          size_transition_mat_f_imm<-matrix(ncol=length(sizes),nrow=length(sizes))
-          
-          for(n in 1:nrow(size_transition_mat_m_imm))
+          if(land_mask[x,y]!=0)
           {
-            size_transition_mat_m_imm[n,]<-dnorm(x=sizes,mean=m_postmolt_imm[n],sd=growth_sd_imm[2])
-            size_transition_mat_f_imm[n,]<-dnorm(x=sizes,mean=f_postmolt_imm[n],sd=growth_sd_imm[1])
-          }
-          
-          #==ensure no crab shrinks in size after molting
-          size_transition_mat_f_imm[lower.tri(size_transition_mat_f_imm)]<-0
-          size_transition_mat_m_imm[lower.tri(size_transition_mat_m_imm)]<-0
-          
-          #==standardize to sum to 1
-          for(z in 1:nrow(size_transition_mat_f_imm))
-          {
-            size_transition_mat_f_imm[z,]<-size_transition_mat_f_imm[z,]/sum(size_transition_mat_f_imm[z,],na.rm=T)
-            size_transition_mat_m_imm[z,]<-size_transition_mat_m_imm[z,]/sum(size_transition_mat_m_imm[z,],na.rm=T)
-          }
-          
-          #==immature crab molt, some mature, some remain immature
-          if(molt_time[1,t]==1)
-          {
-            tmp_molt          <-temp_imm_N[x,y,1,]%*%size_transition_mat_f_imm
-            temp_imm_N[x,y,1,]<-tmp_molt*term_molt_prob
-            temp_mat_N[x,y,1,]<-temp_mat_N[x,y,1,] + (1-term_molt_prob)*tmp_molt
+            #==this is where Max's maps could be implemented
+            #==plug temp into growth curve
+            f_postmolt_imm<-alpha_grow_f_imm + beta_grow_f_imm*sizes
+            m_postmolt_imm<-alpha_grow_m_imm + beta_grow_m_imm*sizes
+            f_postmolt_mat<-alpha_grow_f_mat + beta_grow_f_mat*sizes
+            m_postmolt_mat<-alpha_grow_m_mat + beta_grow_m_mat*sizes
             
-          }
-          if(molt_time[2,t]==1)
-          {
-            tmp_molt          <-temp_imm_N[x,y,2,]%*%size_transition_mat_m_imm
-            temp_imm_N[x,y,2,]<-tmp_molt*term_molt_prob
-            temp_mat_N[x,y,2,]<-temp_mat_N[x,y,2,] + (1-term_molt_prob)*tmp_molt
-          }
-          
-          if(terminal_molt==0)
-          { 
             #======================================
-            #==make size transition matrix mature
-            size_transition_mat_m_mat<-matrix(ncol=length(sizes),nrow=length(sizes))
-            size_transition_mat_f_mat<-matrix(ncol=length(sizes),nrow=length(sizes))
+            #==make size transition matrix immature
+            size_transition_mat_m_imm<-matrix(ncol=length(sizes),nrow=length(sizes))
+            size_transition_mat_f_imm<-matrix(ncol=length(sizes),nrow=length(sizes))
             
-            for(n in 1:nrow(size_transition_mat_m_mat))
+            for(n in 1:nrow(size_transition_mat_m_imm))
             {
-              size_transition_mat_m_mat[n,]<-dnorm(x=sizes,mean=m_postmolt_mat[n],sd=growth_sd_mat[2])
-              size_transition_mat_f_mat[n,]<-dnorm(x=sizes,mean=f_postmolt_mat[n],sd=growth_sd_mat[1])
+              size_transition_mat_m_imm[n,]<-dnorm(x=sizes,mean=m_postmolt_imm[n],sd=growth_sd_imm[2])
+              size_transition_mat_f_imm[n,]<-dnorm(x=sizes,mean=f_postmolt_imm[n],sd=growth_sd_imm[1])
             }
             
             #==ensure no crab shrinks in size after molting
-            size_transition_mat_f_mat[lower.tri(size_transition_mat_f_mat)]<-0
-            size_transition_mat_m_mat[lower.tri(size_transition_mat_m_mat)]<-0
+            size_transition_mat_f_imm[lower.tri(size_transition_mat_f_imm)]<-0
+            size_transition_mat_m_imm[lower.tri(size_transition_mat_m_imm)]<-0
             
-            #==normalize
-            for(z in 1:nrow(size_transition_mat_m_mat))
+            #==standardize to sum to 1
+            for(z in 1:nrow(size_transition_mat_f_imm))
             {
-              size_transition_mat_f_mat[z,]<-size_transition_mat_f_mat[z,]/sum(size_transition_mat_f_mat[z,],na.rm=T)
-              size_transition_mat_m_mat[z,]<-size_transition_mat_m_mat[z,]/sum(size_transition_mat_m_mat[z,],na.rm=T)
+              size_transition_mat_f_imm[z,]<-size_transition_mat_f_imm[z,]/sum(size_transition_mat_f_imm[z,],na.rm=T)
+              size_transition_mat_m_imm[z,]<-size_transition_mat_m_imm[z,]/sum(size_transition_mat_m_imm[z,],na.rm=T)
             }
-            if(!is.na(match(molt_time[1,t],t)) ) 
-              temp_mat_N[x,y,1,]<-temp_mat_N[x,y,1,]%*%size_transition_mat_f_mat
-            if(!is.na(match(molt_time[2,t],t)))
-              temp_mat_N[x,y,2,]<-temp_mat_N[x,y,2,]%*%size_transition_mat_m_mat     
+            
+            #==immature crab molt, some mature, some remain immature
+            if(molt_time[1,t]==1)
+            {
+              tmp_molt          <-temp_imm_N[x,y,1,]%*%size_transition_mat_f_imm
+              temp_imm_N[x,y,1,]<-tmp_molt*term_molt_prob
+              temp_mat_N[x,y,1,]<-temp_mat_N[x,y,1,] + (1-term_molt_prob)*tmp_molt
+              
+            }
+            if(molt_time[2,t]==1)
+            {
+              tmp_molt          <-temp_imm_N[x,y,2,]%*%size_transition_mat_m_imm
+              temp_imm_N[x,y,2,]<-tmp_molt*term_molt_prob
+              temp_mat_N[x,y,2,]<-temp_mat_N[x,y,2,] + (1-term_molt_prob)*tmp_molt
+            }
+            
+            if(terminal_molt==0)
+            { 
+              #======================================
+              #==make size transition matrix mature
+              size_transition_mat_m_mat<-matrix(ncol=length(sizes),nrow=length(sizes))
+              size_transition_mat_f_mat<-matrix(ncol=length(sizes),nrow=length(sizes))
+              
+              for(n in 1:nrow(size_transition_mat_m_mat))
+              {
+                size_transition_mat_m_mat[n,]<-dnorm(x=sizes,mean=m_postmolt_mat[n],sd=growth_sd_mat[2])
+                size_transition_mat_f_mat[n,]<-dnorm(x=sizes,mean=f_postmolt_mat[n],sd=growth_sd_mat[1])
+              }
+              
+              #==ensure no crab shrinks in size after molting
+              size_transition_mat_f_mat[lower.tri(size_transition_mat_f_mat)]<-0
+              size_transition_mat_m_mat[lower.tri(size_transition_mat_m_mat)]<-0
+              
+              #==normalize
+              for(z in 1:nrow(size_transition_mat_m_mat))
+              {
+                size_transition_mat_f_mat[z,]<-size_transition_mat_f_mat[z,]/sum(size_transition_mat_f_mat[z,],na.rm=T)
+                size_transition_mat_m_mat[z,]<-size_transition_mat_m_mat[z,]/sum(size_transition_mat_m_mat[z,],na.rm=T)
+              }
+              if(!is.na(match(molt_time[1,t],t)) ) 
+                temp_mat_N[x,y,1,]<-temp_mat_N[x,y,1,]%*%size_transition_mat_f_mat
+              if(!is.na(match(molt_time[2,t],t)))
+                temp_mat_N[x,y,2,]<-temp_mat_N[x,y,2,]%*%size_transition_mat_m_mat     
+            }
+            
           }
+          
         }
+        
+        #==========================================================================================================
+        
+        if(growth_model == "max_model"){
+          
+          # bot_temp_dat<-read.csv(paste("temp_data/bot_temp_",time,".csv",sep=""),header=T)
+          for(x in 1:nrow(imm_N_at_Len[,,,,t]))
+            for(y in 1:ncol(imm_N_at_Len[,,,,t]))
+            {
+              if(land_mask[x,y]!=0)
+              {
+                
+                #==immature crab molt, some mature, some remain immature
+                if(molt_time[1,t]==1)
+                {
+                  tmp_molt          <-temp_imm_N[x,y,1,]%*%size_transition_mat_f_imm[t,x,y,,] ##### Is the indexing right ??????
+                  temp_imm_N[x,y,1,]<-tmp_molt*term_molt_prob
+                  temp_mat_N[x,y,1,]<-temp_mat_N[x,y,1,] + (1-term_molt_prob)*tmp_molt
+                  
+                }
+                if(molt_time[2,t]==1)
+                {
+                  tmp_molt          <-temp_imm_N[x,y,2,]%*%size_transition_mat_m_imm[t,x,y,,] ##### Is the indexing right ??????
+                  temp_imm_N[x,y,2,]<-tmp_molt*term_molt_prob
+                  temp_mat_N[x,y,2,]<-temp_mat_N[x,y,2,] + (1-term_molt_prob)*tmp_molt
+                }
+                
+                if(terminal_molt==0)
+                { 
+                  
+                  if(!is.na(match(molt_time[1,t],t)) ) 
+                    temp_mat_N[x,y,1,]<-temp_mat_N[x,y,1,]%*%size_transition_mat_f_mat[t,x,y,,] ##### Is the indexing right ??????
+                  if(!is.na(match(molt_time[2,t],t)))
+                    temp_mat_N[x,y,2,]<-temp_mat_N[x,y,2,]%*%size_transition_mat_m_mat[t,x,y,,] ##### Is the indexing right ??????
+                }
+                
+              }
+              
+            }
+          
+        }
+        
       }
   }
   
@@ -625,6 +778,32 @@ for(t in 1:(length(proj_period)-1))
   imm_N_at_Len[,,2,,t+1] <-  temp_imm_N[,,2,]*exp(-imm_male_M*1/year_step)
   mat_N_at_Len[,,1,,t+1] <-  temp_mat_N[,,1,]*exp(-mat_fem_M*1/year_step)
   mat_N_at_Len[,,2,,t+1] <-  temp_mat_N[,,2,]*exp(-mat_male_M*1/year_step)
+  
+  
+  
+  #==generate scientific data based on existing data
+  # Data_Geostat
+  
+  
+  #==Stock assessment
+  # "spatialIPM": spatially-explicit model IPM
+  # "nonspatialIPM": non spatial model IPM
+  # "GMACS": standard stock assessment model
+  
+  
+  if(SA == "spatialIPM"){
+    
+    source(paste0(project_spatialIPM,"03_spatial_model/run_model_mse.R"))
+    
+  }
+  
+  if(SA == "nonspatialIPM"){
+    
+  }
+  
+  if(SA == "GMACS"){
+    
+  }
   
   
 }
