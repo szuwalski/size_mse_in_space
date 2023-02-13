@@ -328,7 +328,7 @@ fish_sel[is.na(fish_sel)]<-0
 port_lat<-  54
 port_lon<- -166.54
 
-load()
+load("4_full_MSE/")
 
 cost<-raster(nrow=length(lat), ncol=length(lon), 
              xmn=min(lon), xmx=max(lon), ymn=min(lat), ymx=max(lat),
