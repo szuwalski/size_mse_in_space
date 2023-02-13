@@ -328,11 +328,18 @@ fish_sel[is.na(fish_sel)]<-0
 port_lat<-  54
 port_lon<- -166.54
 
+load()
+
 cost<-raster(nrow=length(lat), ncol=length(lon), 
+<<<<<<< HEAD
              xmn=min(lon), xmx=max(lon), ymn=min(lat), ymx=max(lat), crs="+proj=utm")
 
 save(data = cost, "/4_full_MSE/")
 
+=======
+             xmn=min(lon), xmx=max(lon), ymn=min(lat), ymx=max(lat),
+             crs="+proj=utm")
+>>>>>>> 41b62322f3a6f98b77d6b408267b35741d5748a7
 cost[]<-1
 for(x in 1:nrow(cost))
   for(y in 1:ncol(cost))
@@ -447,6 +454,7 @@ for(t in 1:(length(proj_period)-1))
       # 
       #========================================================
       #==subtract catch from locations while quota is remaining
+      print("Begin quota")
       while(quota_remaining>0.1 & net_benefit_patch[chosen_patch[1],chosen_patch[2]]>0)
       {
         #==find closest, highest value, fishable patch
@@ -464,6 +472,7 @@ for(t in 1:(length(proj_period)-1))
                                             " | temp_imm_N=",temp_imm_N[chosen_patch[1],chosen_patch[2],sex,x],
                                             " | temp_mat_N=",temp_imm_N[chosen_patch[1],chosen_patch[2],sex,x],
                                             " | potential catch= ",potential_catch))
+            
             potential_catch<-potential_catch + temp_imm_N[chosen_patch[1],chosen_patch[2],sex,x]*fish_sel[sex,x]*wt_at_len[sex,x] + 
               temp_mat_N[chosen_patch[1],chosen_patch[2],sex,x]*fish_sel[sex,x]*wt_at_len[sex,x]
           }
@@ -563,6 +572,7 @@ for(t in 1:(length(proj_period)-1))
         catch_patch[catch_patch>quota_remaining]<-quota_remaining
         net_benefit_patch<-catch_patch*price - cost_patch
       }
+      print("End quota")
       
       profit_by_fisher[chosen_patch[1],chosen_patch[2],t,f] <- sum(catch_by_fisher[chosen_patch[1],chosen_patch[2],,,t,f])*price - cost_by_fisher[chosen_patch[1],chosen_patch[2],t,f]
     }
