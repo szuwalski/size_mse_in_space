@@ -232,7 +232,7 @@ for(x in 1:length(proj_period))
 #==========================
 ## Growth
 #--------
-growth_model <- "max_model" # "max_model" "cody_model"
+growth_model <- "cody_model" # "max_model" "cody_model"
 # Cody's model --> non-spatial life-history parameters
 # Maxime's model --> spatially varying life-history parameters
 
@@ -328,8 +328,11 @@ fish_sel[is.na(fish_sel)]<-0
 port_lat<-  54
 port_lon<- -166.54
 
+load()
+
 cost<-raster(nrow=length(lat), ncol=length(lon), 
-             xmn=min(lon), xmx=max(lon), ymn=min(lat), ymx=max(lat), crs="+proj=utm")
+             xmn=min(lon), xmx=max(lon), ymn=min(lat), ymx=max(lat),
+             crs="+proj=utm")
 cost[]<-1
 for(x in 1:nrow(cost))
   for(y in 1:ncol(cost))
@@ -363,7 +366,7 @@ for(x in 1:length(lon))
       distance_map[y,x]<-costDistance(trCostC, pts[1,],pts[2,])
       if(distance_map[y,x]>10000)distance_map[y,x]<-NA
     }
-  }  
+  }
 # filled.contour(x=lon,y=rev(lat),g(distance_map*land_mask),plot.axes=c(map(add=TRUE,fill=T,col='grey'),
 #                                                                       points(y=port_lat,x=port_lon,pch=16,col='red')))
 #write.csv(distance_map,'dist.csv')
@@ -444,6 +447,7 @@ for(t in 1:(length(proj_period)-1))
       # 
       #========================================================
       #==subtract catch from locations while quota is remaining
+      print("Begin quota")
       while(quota_remaining>0.1 & net_benefit_patch[chosen_patch[1],chosen_patch[2]]>0)
       {
         #==find closest, highest value, fishable patch
@@ -461,6 +465,7 @@ for(t in 1:(length(proj_period)-1))
                                             " | temp_imm_N=",temp_imm_N[chosen_patch[1],chosen_patch[2],sex,x],
                                             " | temp_mat_N=",temp_imm_N[chosen_patch[1],chosen_patch[2],sex,x],
                                             " | potential catch= ",potential_catch))
+            
             potential_catch<-potential_catch + temp_imm_N[chosen_patch[1],chosen_patch[2],sex,x]*fish_sel[sex,x]*wt_at_len[sex,x] + 
               temp_mat_N[chosen_patch[1],chosen_patch[2],sex,x]*fish_sel[sex,x]*wt_at_len[sex,x]
           }
@@ -560,6 +565,7 @@ for(t in 1:(length(proj_period)-1))
         catch_patch[catch_patch>quota_remaining]<-quota_remaining
         net_benefit_patch<-catch_patch*price - cost_patch
       }
+      print("End quota")
       
       profit_by_fisher[chosen_patch[1],chosen_patch[2],t,f] <- sum(catch_by_fisher[chosen_patch[1],chosen_patch[2],,,t,f])*price - cost_by_fisher[chosen_patch[1],chosen_patch[2],t,f]
     }
@@ -592,7 +598,7 @@ for(t in 1:(length(proj_period)-1))
   if( molt_time[1,t]==1 | molt_time[2,t]==1 )
   {
     
-    if(growth_model == "cody_model"){
+    if(growth_model == "max_model"){
       
       if(print_messages) print("growth Max")
       source("4_full_MSE/LHP/growth_t.R")
