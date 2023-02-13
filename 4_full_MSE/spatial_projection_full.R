@@ -232,7 +232,7 @@ for(x in 1:length(proj_period))
 #==========================
 ## Growth
 #--------
-growth_model <- "max_model" # "max_model" "cody_model"
+growth_model <- "cody_model" # "max_model" "cody_model"
 # Cody's model --> non-spatial life-history parameters
 # Maxime's model --> spatially varying life-history parameters
 
@@ -330,6 +330,9 @@ port_lon<- -166.54
 
 cost<-raster(nrow=length(lat), ncol=length(lon), 
              xmn=min(lon), xmx=max(lon), ymn=min(lat), ymx=max(lat), crs="+proj=utm")
+
+save(data = cost, "/4_full_MSE/")
+
 cost[]<-1
 for(x in 1:nrow(cost))
   for(y in 1:ncol(cost))
@@ -363,7 +366,7 @@ for(x in 1:length(lon))
       distance_map[y,x]<-costDistance(trCostC, pts[1,],pts[2,])
       if(distance_map[y,x]>10000)distance_map[y,x]<-NA
     }
-  }  
+  }
 # filled.contour(x=lon,y=rev(lat),g(distance_map*land_mask),plot.axes=c(map(add=TRUE,fill=T,col='grey'),
 #                                                                       points(y=port_lat,x=port_lon,pch=16,col='red')))
 #write.csv(distance_map,'dist.csv')
@@ -592,7 +595,7 @@ for(t in 1:(length(proj_period)-1))
   if( molt_time[1,t]==1 | molt_time[2,t]==1 )
   {
     
-    if(growth_model == "cody_model"){
+    if(growth_model == "max_model"){
       
       if(print_messages) print("growth Max")
       source("4_full_MSE/LHP/growth_t.R")
