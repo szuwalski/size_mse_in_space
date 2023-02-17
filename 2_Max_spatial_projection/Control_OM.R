@@ -140,7 +140,7 @@ n_grpar_growth = dim(growth_par_beta)[2] # number of parameter to define growth
 # --- Growth is define by 2 parameters : initial and last size increment 
 # ---- Female immature
 growth_par_beta[1,1,1] <- 3 # initial size increment  
-growth_par_beta[1,2,1] <- 15 + 15 # last size increment : mean
+growth_par_beta[1,2,1] <- 15 # last size increment : mean
 growth_par_beta[1,3,1] <-  0.3 # scale parameter of the gamma distribution used to generate the growth transition matrix 
 
 growth_par_beta[2,1,1] <- 0.1 # initial size increment  : sd
@@ -149,7 +149,7 @@ growth_par_beta[2,3,1] <-  NA
 
 # ---- Female mature
 growth_par_beta[1,1,2] <- 3 # initial size increment  
-growth_par_beta[1,2,2] <- 15 + 15 # last size increment : mean
+growth_par_beta[1,2,2] <- 15 # last size increment : mean
 growth_par_beta[1,3,2] <-  0.3 # scale parameter of the gamma distribution used to generate the growth transition matrix 
 
 growth_par_beta[2,1,2] <- 0.1 # initial size increment  : sd
@@ -158,7 +158,7 @@ growth_par_beta[2,3,2] <-  NA
 
 # ---- male immature
 growth_par_beta[1,1,3] <- 3 # initial size increment  
-growth_par_beta[1,2,3] <- 15 + 15 # last size increment : mean
+growth_par_beta[1,2,3] <- 15 # last size increment : mean
 growth_par_beta[1,3,3] <-  0.3 # scale parameter of the gamma distribution used to generate the growth transition matrix 
 
 growth_par_beta[2,1,3] <- 0.1 # initial size increment  : sd
@@ -167,7 +167,7 @@ growth_par_beta[2,3,3] <-  NA
 
 # ---- male mature
 growth_par_beta[1,1,4] <- 3 # initial size increment  
-growth_par_beta[1,2,4] <- 15 + 15 #last size increment : mean
+growth_par_beta[1,2,4] <- 15 #last size increment : mean
 growth_par_beta[1,3,4] <-  0.3 #  scale parameter of the gamma distribution used to generate the growth transition matrix 
 
 growth_par_beta[2,1,4] <- 0.1 # initial size increment  : sd

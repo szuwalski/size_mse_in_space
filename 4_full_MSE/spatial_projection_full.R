@@ -116,9 +116,57 @@ recruit_time	<-rep(c(0,0,0,0,0,0,0,0,0,1,0,0),year_n)
 move_time		  <-rep(c(1,1,1,1,1,1,1,1,1,1,1,1),year_n)
 molt_time  	  <-rbind(rep(c(0,0,0,0,0,0,0,0,0,1,0,0),year_n),rep(c(0,0,0,0,0,0,0,0,0,1,0,0),year_n)) # females first, males second
 mate_time 	  <-rep(c(0,0,0,0,0,0,0,1,0,1,0,0),year_n)
+SA_time       <-rep(c(0,0,0,0,0,0,0,0,0,1,0,0),year_n)
 
+## Survey data
+#-------------
 ## Load survey data for sampling locations
 load(paste0(project_spatialIPM,'02_transformed_data/survey/Data_Geostat_4class.RData'))
+
+DF <- as_tibble(Data_Geostat)
+
+Data_Geostat = cbind(
+  "size_class" = DF[, "size_bin"],
+  "year" = DF[, "Year"],
+  "Catch_N" = DF[, "Catch"],
+  "AreaSwept_km2" = DF[, "AreaSwept_km2"],
+  "Vessel" = 0,
+  "Lat" = DF[, "Lat"],
+  "Lon" = DF[, "Lon"]
+)
+
+colnames(Data_Geostat) <-
+  c("size_class",
+    "year",
+    "Catch_N",
+    "AreaSwept_km2",
+    "Vessel",
+    "Lat",
+    "Lon")
+
+Data_Geostat = Data_Geostat %>%
+  filter(year %in% 2015:2016)
+
+## Catch data
+#------------
+load(paste0(project_spatialIPM,"02_transformed_data/movement/COG/COG_smoother_ADFG/catch_fishery_mov_intersect.RData"))
+catch_N <- catch_fishery_mov_intersect
+
+# Choose if we implement fisheries catches (Fisheries_catches <-TRUE) or not in the model 
+Fisheries_catches <-TRUE
+mov <- FALSE
+
+# Choose if we implement simulated fisheries catches(Catches_sim_random <-TRUE) ro not in the model 
+Catches_sim_random <- FALSE
+Catches_sim_fractionAb <- FALSE
+
+heterMov <- FALSE
+homoMov <- FALSE
+
+# Smoother
+#smoother <- TRUE # smoother is with knots
+#ADFG <- TRUE # smoother is with ADFG cells
+#KNOT_i <- FALSE
 
 
 ## Stock assessment
@@ -127,6 +175,31 @@ SA <- "spatialIPM"
 # "spatialIPM": spatially-explicit model IPM
 # "nonspatialIPM": non spatial model IPM
 # "GMACS": standard stock assessment model
+
+## Spatial settings
+Data_Set <- 'Snow_crab'
+
+## Number of knot/stations
+n_x = c(30, 50, 75, 100, 150, 200, 300)[3]
+
+# Output from Calc_Kmeans with knots for a triangulated mesh
+# Calc_Kmeans determines the location for a set of knots for
+# approximating spatial variation
+# n_x: the number of knots to select
+# nstart the number of times that the k-means algorithm is run while
+# searching for the best solution (default=100)
+# ter.max the number of iterations used per k-means algorithm
+Kmeans_Config = list("randomseed" = 1,
+                     "nstart" = 100,
+                     "iter.max" = 1e3)
+
+# Define studied region
+# builds an object used to determine areas to extrapolation
+# densities to when calculating indices
+strata.limits <- data.frame('STRATA' = "All_areas")
+Region = "Eastern_Bering_Sea"
+Extrapolation_List = FishStatsUtils::make_extrapolation_info(Region = Region,
+                                                             strata.limits = strata.limits)
 
 
 ## Matrices of abundance at size
@@ -148,11 +221,17 @@ if(size_class_settings=="rough"){
   
   for(i in 1:4){
     
-    imm_N_at_Len[,,1,i,1] <- exp(smooth_imm)[,,1,i] # matrix(rnorm(n = length(lat) * length(lon),mean = 1,sd = 1),nrow = length(lat), ncol = length(lon))
-    imm_N_at_Len[,,2,i,1] <- exp(smooth_imm)[,,2,i] # matrix(rnorm(n = length(lat) * length(lon),mean = 1,sd = 1),nrow = length(lat), ncol = length(lon))
-    mat_N_at_Len[,,1,i,1] <- exp(smooth_mat)[,,1,i] # matrix(rnorm(n = length(lat) * length(lon),mean = 1,sd = 1),nrow = length(lat), ncol = length(lon))
-    mat_N_at_Len[,,2,i,1] <- exp(smooth_mat)[,,2,i] # matrix(rnorm(n = length(lat) * length(lon),mean = 1,sd = 1),nrow = length(lat), ncol = length(lon))
-    
+    # imm_N_at_Len[,,1,i,1] <- exp(smooth_imm)[,,1,i] # matrix(rnorm(n = length(lat) * length(lon),mean = 1,sd = 1),nrow = length(lat), ncol = length(lon))
+    # imm_N_at_Len[,,2,i,1] <- exp(smooth_imm)[,,2,i] # matrix(rnorm(n = length(lat) * length(lon),mean = 1,sd = 1),nrow = length(lat), ncol = length(lon))
+    # mat_N_at_Len[,,1,i,1] <- exp(smooth_mat)[,,1,i] # matrix(rnorm(n = length(lat) * length(lon),mean = 1,sd = 1),nrow = length(lat), ncol = length(lon))
+    # mat_N_at_Len[,,2,i,1] <- exp(smooth_mat)[,,2,i] # matrix(rnorm(n = length(lat) * length(lon),mean = 1,sd = 1),nrow = length(lat), ncol = length(lon))
+
+    model <- RMexp(scale = 20,var = 1e10)
+    imm_N_at_Len[,,1,i,1] <- (as.matrix(RFsimulate(model, lon, rev(lat), grid=TRUE)))
+    imm_N_at_Len[,,2,i,1] <- (as.matrix(RFsimulate(model, lon, rev(lat), grid=TRUE)))
+    mat_N_at_Len[,,1,i,1] <- (as.matrix(RFsimulate(model, lon, rev(lat), grid=TRUE)))
+    mat_N_at_Len[,,2,i,1] <- (as.matrix(RFsimulate(model, lon, rev(lat), grid=TRUE)))
+
   }
   
   
@@ -328,18 +407,12 @@ fish_sel[is.na(fish_sel)]<-0
 port_lat<-  54
 port_lon<- -166.54
 
-load("4_full_MSE/")
-
-cost<-raster(nrow=length(lat), ncol=length(lon), 
-<<<<<<< HEAD
-             xmn=min(lon), xmx=max(lon), ymn=min(lat), ymx=max(lat), crs="+proj=utm")
-
-save(data = cost, "/4_full_MSE/")
-
-=======
+cost<-raster(nrow=length(lat), ncol=length(lon),
              xmn=min(lon), xmx=max(lon), ymn=min(lat), ymx=max(lat),
              crs="+proj=utm")
->>>>>>> 41b62322f3a6f98b77d6b408267b35741d5748a7
+
+load("4_full_MSE/cost.RData") ## In case of a problem with rgdal, load cost object
+
 cost[]<-1
 for(x in 1:nrow(cost))
   for(y in 1:ncol(cost))
@@ -542,8 +615,7 @@ for(t in 1:(length(proj_period)-1))
               total_spatial_catch[chosen_patch[1],chosen_patch[2],sex,x,t] <- total_spatial_catch[chosen_patch[1],chosen_patch[2],sex,x,t] + 
                 temp_imm_N[chosen_patch[1],chosen_patch[2],sex,x]*fish_sel[sex,x]*use_harv + 
                 temp_mat_N[chosen_patch[1],chosen_patch[2],sex,x]*fish_sel[sex,x]*use_harv  
-              
-              
+
               temp_catch<- temp_imm_N[chosen_patch[1],chosen_patch[2],sex,x]*fish_sel[sex,x]*wt_at_len[sex,x]*use_harv + 
                 temp_mat_N[chosen_patch[1],chosen_patch[2],sex,x]*fish_sel[sex,x]*wt_at_len[sex,x]*use_harv
               
@@ -792,32 +864,88 @@ for(t in 1:(length(proj_period)-1))
   mat_N_at_Len[,,1,,t+1] <-  temp_mat_N[,,1,]*exp(-mat_fem_M*1/year_step)
   mat_N_at_Len[,,2,,t+1] <-  temp_mat_N[,,2,]*exp(-mat_male_M*1/year_step)
   
-  
-  
-  #==generate scientific data based on existing data
+  #==generate scientific (1 sample per cell grid - could be something else)
   # Data_Geostat
   
+  ###############################
+  ## Pass to do.call to go faster
+  ###############################
+  if(survey_time[t] == 1){
+    print("Simulate scientific data")
+    for(x in 1:length(lat))
+    {
+      for(y in 1:length(lon))
+      {
+        for(i in 1:length(sizes))
+        {
+          if(land_mask[y,x]!=0)
+          {
+            
+            # Need to implement observation pdf
+            # print(paste0("x:",x,"|y:",y,"|i:",i))
+            j = nrow(Data_Geostat)+1
+            Data_Geostat[j,"size_class"] = as.factor(i)
+            Data_Geostat[j,"year"] = Years_climsc[t]
+            Data_Geostat[j,"Catch_N"] = imm_N_at_Len[x,y,1,i,t] + mat_N_at_Len[x,y,1,i,t] # Only male at the moment
+            Data_Geostat[j,"Vessel"] = "missing"
+            Data_Geostat[j,"AreaSwept_km2"] = 1 # Need to divide by the area of the rectangle
+            Data_Geostat[j,"Lat"] = lat[x]
+            Data_Geostat[j,"Lon"] = lon[y]
+            
+          }
+        }
+      }
+    }
+  }
   
   #==Stock assessment
   # "spatialIPM": spatially-explicit model IPM
   # "nonspatialIPM": non spatial model IPM
   # "GMACS": standard stock assessment model
-  
-  
-  if(SA == "spatialIPM"){
+  if(SA_time[t] == 1){
     
-    source(paste0(project_spatialIPM,"03_spatial_model/run_model_mse.R"))
+    print("Make commercial data")
+    
+    for(x in 1:length(lat))
+    {
+      for(y in 1:length(lon))
+      {
+        for(i in 1:length(sizes))
+        {
+          if(land_mask[y,x]!=0)
+          {
+            # Need to implement observation pdf
+            j = nrow(catch_N)+1
+            catch_N[j,"Year"] = as.character(Years_climsc[t])
+            catch_N[j,"size_bin"] = as.character(i)
+            catch_N[j,"Catches_N"] = sum(catch_by_fisher[x,y,,i,which(Years_climsc == Years_climsc[t]),f])
+            catch_N[j,"Lon"] = lon[y]
+            catch_N[j,"Lat"] = lat[x]
+            
+          }
+        }
+      }
+    }
+    
+    print("Make Stock assessment")
+    
+    if(SA == "spatialIPM"){
+      
+      print("spatial IPM")
+      
+      source(paste0(project_spatialIPM,"03_spatial_model/run_model_mse.R"))
+      
+    }
+    
+    if(SA == "nonspatialIPM"){
+      
+    }
+    
+    if(SA == "GMACS"){
+      
+    }
     
   }
-  
-  if(SA == "nonspatialIPM"){
-    
-  }
-  
-  if(SA == "GMACS"){
-    
-  }
-  
   
 }
 
@@ -830,7 +958,7 @@ tot_mat<-apply(mat_N_at_Len,c(5),sum,na.rm=T)
 
 x11()
 par(mfrow=c(4,1),mar=c(.1,.1,.1,.1),oma=c(4,.1,1,1))
-plot(tot_imm[100:length(tot_imm)],type='l',las=1,xaxt='n',ylim=c(0,9000000000))
+plot(tot_imm[100:length(tot_imm)],type='l',las=1,xaxt='n',ylim=c(0,max(tot_imm,tot_mat)))
 lines(tot_mat[100:length(tot_imm)],lty=2)
 legend('topright',bty='n',lty=c(1,2),legend=c("Immature N","Mature N"))
 # plot(tot_catch,xaxt='n',las=1)
