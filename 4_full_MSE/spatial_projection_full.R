@@ -11,6 +11,7 @@ rm(list=ls())
 source("2_Max_spatial_projection/LHP_functions/libraries.R")
 
 library(gdistance)
+library(FishStatsUtils)
 library(maps)
 library(maptools)
 library(raster)
@@ -18,6 +19,7 @@ library(rnaturalearth)
 library(reshape2)
 library(sf)
 library(tidyverse)
+library(TMB)
 
 world_sf <- ne_countries(scale = "medium", returnclass = "sf")
 
@@ -871,7 +873,9 @@ for(t in 1:(length(proj_period)-1))
   ## Pass to do.call to go faster
   ###############################
   if(survey_time[t] == 1){
+    
     print("Simulate scientific data")
+    ## Implemented through matrix because much faster
     for(x in 1:length(lat))
     {
       for(y in 1:length(lon))
@@ -883,19 +887,41 @@ for(t in 1:(length(proj_period)-1))
             
             # Need to implement observation pdf
             # print(paste0("x:",x,"|y:",y,"|i:",i))
-            j = nrow(Data_Geostat)+1
-            Data_Geostat[j,"size_class"] = as.factor(i)
-            Data_Geostat[j,"year"] = Years_climsc[t]
-            Data_Geostat[j,"Catch_N"] = imm_N_at_Len[x,y,1,i,t] + mat_N_at_Len[x,y,1,i,t] # Only male at the moment
-            Data_Geostat[j,"Vessel"] = "missing"
-            Data_Geostat[j,"AreaSwept_km2"] = 1 # Need to divide by the area of the rectangle
-            Data_Geostat[j,"Lat"] = lat[x]
-            Data_Geostat[j,"Lon"] = lon[y]
+            if(i==1 & x==1 & y==1){
+              
+              sci_mat = matrix(data = c(i, # size_class
+                                         Years_climsc[t], # year
+                                         imm_N_at_Len[x,y,1,i,t] + mat_N_at_Len[x,y,1,i,t], # Catch_N
+                                         1, # AreaSwept_km2
+                                         0, # Vessel
+                                         lat[x], # Lat
+                                         lon[y]), # Lon
+                                nrow = 1)
+              
+            }else{
+              
+              line_vec = matrix(data = c(i, # size_class
+                                         Years_climsc[t], # year
+                                         imm_N_at_Len[x,y,1,i,t] + mat_N_at_Len[x,y,1,i,t], # Catch_N
+                                         1, # AreaSwept_km2
+                                         0, # Vessel
+                                         lat[x], # Lat
+                                         lon[y]), # Lon
+                                nrow = 1)
+              sci_mat = rbind(sci_mat,line_vec)
+              
+            }
             
           }
         }
       }
     }
+    
+    sci_df = as.data.frame(sci_mat)
+    colnames(sci_df) = colnames(Data_Geostat)
+    sci_df$size_class = as.factor(sci_df$size_class)
+    Data_Geostat = rbind(Data_Geostat,sci_df)
+    
   }
   
   #==Stock assessment
@@ -914,18 +940,43 @@ for(t in 1:(length(proj_period)-1))
         {
           if(land_mask[y,x]!=0)
           {
-            # Need to implement observation pdf
-            j = nrow(catch_N)+1
-            catch_N[j,"Year"] = as.character(Years_climsc[t])
-            catch_N[j,"size_bin"] = as.character(i)
-            catch_N[j,"Catches_N"] = sum(catch_by_fisher[x,y,,i,which(Years_climsc == Years_climsc[t]),f])
-            catch_N[j,"Lon"] = lon[y]
-            catch_N[j,"Lat"] = lat[x]
             
+            #------------------------------------------------------------------------------------------------------------------------
+            # Need to implement observation pdf
+            # print(paste0("x:",x,"|y:",y,"|i:",i))
+            if(i==1 & x==1 & y==1){
+              
+              catch_mat = matrix(data = c(Years_climsc[t], # Year
+                                        i, # size_bin
+                                        sum(catch_by_fisher[x,y,1,i,which(Years_climsc == Years_climsc[t]),f]), # Catches_N
+                                        lon[y], # Lon
+                                        lat[x]), # Lat
+                               nrow = 1)
+              
+            }else{
+              
+              line_vec = matrix(data = c(Years_climsc[t], # Year
+                                         i, # size_bin
+                                         sum(catch_by_fisher[x,y,1,i,which(Years_climsc == Years_climsc[t]),f]), # Catches_N
+                                         lon[y], # Lon
+                                         lat[x]), # Lat
+                                nrow = 1)
+              
+              catch_mat = rbind(catch_mat,line_vec)
+              
+            }
+
           }
         }
       }
     }
+
+    catch_df = as.data.frame(catch_mat)
+    colnames(catch_df) = colnames(catch_N)
+    catch_df$Year = as.character(catch_df$Year)
+    catch_df$size_bin = as.character(catch_df$size_bin)
+    catch_N = rbind(catch_N,catch_df)
+    
     
     print("Make Stock assessment")
     
@@ -933,7 +984,7 @@ for(t in 1:(length(proj_period)-1))
       
       print("spatial IPM")
       
-      source(paste0(project_spatialIPM,"03_spatial_model/run_model_mse.R"))
+      # source(paste0(project_spatialIPM,"03_spatial_model/run_model_mse.R"))
       
     }
     
