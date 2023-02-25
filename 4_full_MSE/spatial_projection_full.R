@@ -41,11 +41,29 @@ attach(spatial_grid)
 
 # designate areas of potential habitat (i.e. not land)
 data(wrld_simpl)
-point_expand <- expand.grid(lon, lat)  
+point_expand <- expand.grid(lon, lat)
 pts <- SpatialPoints(point_expand, proj4string=CRS(proj4string(wrld_simpl)))
 proj4string(wrld_simpl)<-CRS(proj4string(pts))
 ## Find which points fall over land
 land <- !is.na(over(pts, wrld_simpl)$FIPS)
+
+test = rasterFromXYZ(cbind(point_expand,rep(rnorm(nrow(point_expand)),nrow(point_expand))), crs=CRS(proj4string(wrld_simpl)), digits=5)
+cell_area = raster::area(test) %>% as.matrix()
+
+## EBS area
+load("4_full_MSE/data/EBS.RData")
+xys = st_as_sf(as.data.frame(Extrapolation_List$Data_Extrap), coords=c("Lon","Lat"),crs=CRS(proj4string(wrld_simpl)))
+EBS_sf = xys %>% 
+  group_by() %>% 
+  summarise(Include = sum(Include)) %>% 
+  st_cast("MULTIPOINT") %>% 
+  st_cast("MULTILINESTRING") %>% 
+  st_cast("MULTIPOLYGON")
+
+EBS_sf = st_convex_hull(EBS_sf)
+# plot(EBS_sf)
+EBS_sp = as_Spatial(EBS_sf)
+EBS_mask = is.na(over(pts, EBS_sp)$Include)
 
 # ## Check
 # plot(wrld_simpl,xlim = c(min(lon), max(lon)), ylim = c(min(lat),max(lat)))
@@ -59,9 +77,9 @@ clim_sc =c("rcp45") # climate scenario to test
 
 ## Projection period
 #-------------------
-year_n	 <-50
-year_step <-12
-proj_period	<-seq(1,year_step*year_n)
+year_n	 <- 50
+year_step <- 12
+proj_period	<- seq(1,year_step*year_n)
 Years_climsc <- rep(2022:(2022+year_n), each=year_step)
 n_t <- length(proj_period)
 
@@ -269,12 +287,32 @@ if(fake_dist_data==1)
 }
 
 #==delete critters where there is land (this will be used for movement as well)
+
+if(size_class_settings == "fine") area_mask = "full"
+if(size_class_settings == "rough") area_mask = "EBS_only"
+
 land_mask<-matrix(1,ncol=length(lon),nrow=length(lat),byrow=T)
+land_matrix = t(matrix(land,ncol=length(lon),nrow=length(lat)))
+EBS_mask_matrix = t(matrix(EBS_mask,ncol=length(lon),nrow=length(lat)))
+# plot(t(land_matrix))
+# plot(t(EBS_mask_matrix))
 for(x in 1:length(lat))
   for(y in 1:length(lon))
   {
-    if(land[intersect(which(!is.na(match(pts$Var1,(lon)[y]))) ,which(!is.na(match( pts$Var2,(lat)[x]))))])
-      land_mask[x,y]<-0
+  
+    if(area_mask == "full"){
+      if(land_matrix[x,y] == 1){
+        land_mask[x,y]<-0
+      }
+    }
+    
+    if(area_mask == "EBS_only"){
+      if(EBS_mask_matrix[x,y] == 1){
+        land_mask[x,y]<-0
+      }else{
+        land_mask[x,y]<-1
+      }
+    }
   }
 
 #==ugh. this is dumb, but how to automate?
@@ -284,6 +322,7 @@ land_mask[25:40,20:40]
 land_mask[31,32]<-0
 land_mask[32,29]<-0
 filled.contour(land_mask)
+
 filled.contour(x=lon,y=rev(lat),g(imm_N_at_Len[,,1,1,1]))
 #write.csv(land_mask,'landmask.csv')
 
@@ -442,15 +481,15 @@ rownames(distance_map)<-(lat)
 for(x in 1:length(lon))
   for(y in 1:length(lat))
   {
-    if(land_mask[y,x]!=0)
+    if(land_matrix[y,x]!=0)
     {
       pts <- cbind(x=c(port_lon, as.numeric(colnames(distance_map)[x])), y=c(port_lat,  as.numeric(rownames(distance_map)[y])))
       distance_map[y,x]<-costDistance(trCostC, pts[1,],pts[2,])
       if(distance_map[y,x]>10000)distance_map[y,x]<-NA
     }
   }
-# filled.contour(x=lon,y=rev(lat),g(distance_map*land_mask),plot.axes=c(map(add=TRUE,fill=T,col='grey'),
-#                                                                       points(y=port_lat,x=port_lon,pch=16,col='red')))
+filled.contour(x=lon,y=rev(lat),g(distance_map*land_mask),plot.axes=c(map(add=TRUE,fill=T,col='grey'),
+                                                                      points(y=port_lat,x=port_lon,pch=16,col='red')))
 #write.csv(distance_map,'dist.csv')
 
 
@@ -458,10 +497,10 @@ for(x in 1:length(lon))
 # calculate costs to fish
 #=============================================
 #==this should be related to the amount of fish in a patch
-cost_fish<-10
+cost_fish <- 10
 
-cost_travel<-10000
-cost_patch<-cost_travel*distance_map + cost_fish
+cost_travel <- 10
+cost_patch <- cost_travel * distance_map + cost_fish
 price<-1.5
 
 fishers<-4
@@ -517,7 +556,7 @@ for(t in 1:(length(proj_period)-1))
       catch_patch[catch_patch>quota[f]]<-quota[f] # this makes it so they don't travel a long way if they can get it close
       
       #filled.contour(x=lon,y=rev(lat),g(catch_patch),plot.axes=map(add=TRUE,fill=T,col='grey') )
-      net_benefit_patch<-catch_patch*price-cost_patch
+      net_benefit_patch<-catch_patch*price - cost_patch
       
       #filled.contour(x=lon,y=rev(lat),g(net_benefit_patch),plot.axes=map(add=TRUE,fill=T,col='grey'),zlim=c(0,max(net_benefit_patch,na.rm=T)) )
       max_net_benefit<-which(net_benefit_patch==max(net_benefit_patch,na.rm=T),arr.ind=T)
@@ -876,6 +915,7 @@ for(t in 1:(length(proj_period)-1))
     
     print("Simulate scientific data")
     ## Implemented through matrix because much faster
+    sci_it = 0
     for(x in 1:length(lat))
     {
       for(y in 1:length(lon))
@@ -887,23 +927,25 @@ for(t in 1:(length(proj_period)-1))
             
             # Need to implement observation pdf
             # print(paste0("x:",x,"|y:",y,"|i:",i))
-            if(i==1 & x==1 & y==1){
+            if(sci_it == 0){
               
               sci_mat = matrix(data = c(i, # size_class
                                          Years_climsc[t], # year
                                          imm_N_at_Len[x,y,1,i,t] + mat_N_at_Len[x,y,1,i,t], # Catch_N
-                                         1, # AreaSwept_km2
+                                          cell_area[x,y], # AreaSwept_km2
                                          0, # Vessel
                                          lat[x], # Lat
                                          lon[y]), # Lon
                                 nrow = 1)
+              
+              sci_it = sci_it + 1
               
             }else{
               
               line_vec = matrix(data = c(i, # size_class
                                          Years_climsc[t], # year
                                          imm_N_at_Len[x,y,1,i,t] + mat_N_at_Len[x,y,1,i,t], # Catch_N
-                                         1, # AreaSwept_km2
+                                         cell_area[x,y], # AreaSwept_km2
                                          0, # Vessel
                                          lat[x], # Lat
                                          lon[y]), # Lon
@@ -932,6 +974,7 @@ for(t in 1:(length(proj_period)-1))
     
     print("Make commercial data")
     
+    com_it = 0
     for(x in 1:length(lat))
     {
       for(y in 1:length(lon))
@@ -944,14 +987,15 @@ for(t in 1:(length(proj_period)-1))
             #------------------------------------------------------------------------------------------------------------------------
             # Need to implement observation pdf
             # print(paste0("x:",x,"|y:",y,"|i:",i))
-            if(i==1 & x==1 & y==1){
+            if(com_it==0){
               
               catch_mat = matrix(data = c(Years_climsc[t], # Year
-                                        i, # size_bin
-                                        sum(catch_by_fisher[x,y,1,i,which(Years_climsc == Years_climsc[t]),f]), # Catches_N
-                                        lon[y], # Lon
-                                        lat[x]), # Lat
-                               nrow = 1)
+                                          i, # size_bin
+                                          sum(catch_by_fisher[x,y,1,i,which(Years_climsc == Years_climsc[t]),f]), # Catches_N
+                                          lon[y], # Lon
+                                          lat[x]), # Lat
+                                 nrow = 1)
+              com_it = com_it + 1
               
             }else{
               
