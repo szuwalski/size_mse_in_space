@@ -86,7 +86,7 @@ n_t <- length(proj_period)
 
 ## Size class settings
 #---------------------
-size_class_settings <- "rough"
+size_class_settings <- "fine"
 # either "fine" (5 cm per 5 cm like GMACS)
 # or "rough" (4 size classes accordingly to the IPM)
 # In spatial IPM, size classes are: 0 < size1 =<40 / 40 < size 2 =< 78 / 78<size3 =<101 / 101<size4
@@ -288,7 +288,6 @@ if(fake_dist_data==1)
 
 #==delete critters where there is land (this will be used for movement as well)
 
-if(size_class_settings == "fine") area_mask = "full"
 if(size_class_settings == "rough") area_mask = "EBS_only"
 
 land_mask<-matrix(1,ncol=length(lon),nrow=length(lat),byrow=T)
@@ -299,20 +298,11 @@ EBS_mask_matrix = t(matrix(EBS_mask,ncol=length(lon),nrow=length(lat)))
 for(x in 1:length(lat))
   for(y in 1:length(lon))
   {
-  
-    if(area_mask == "full"){
-      if(land_matrix[x,y] == 1){
-        land_mask[x,y]<-0
-      }
+    
+    if(land_matrix[x,y] == 1){
+      land_mask[x,y]<-0
     }
     
-    if(area_mask == "EBS_only"){
-      if(EBS_mask_matrix[x,y] == 1){
-        land_mask[x,y]<-0
-      }else{
-        land_mask[x,y]<-1
-      }
-    }
   }
 
 #==ugh. this is dumb, but how to automate?
@@ -488,8 +478,8 @@ for(x in 1:length(lon))
       if(distance_map[y,x]>10000)distance_map[y,x]<-NA
     }
   }
-filled.contour(x=lon,y=rev(lat),g(distance_map*land_mask),plot.axes=c(map(add=TRUE,fill=T,col='grey'),
-                                                                      points(y=port_lat,x=port_lon,pch=16,col='red')))
+# filled.contour(x=lon,y=rev(lat),g(distance_map*land_mask),plot.axes=c(map(add=TRUE,fill=T,col='grey'),
+#                                                                       points(y=port_lat,x=port_lon,pch=16,col='red')))
 #write.csv(distance_map,'dist.csv')
 
 
@@ -499,9 +489,9 @@ filled.contour(x=lon,y=rev(lat),g(distance_map*land_mask),plot.axes=c(map(add=TR
 #==this should be related to the amount of fish in a patch
 cost_fish <- 10
 
-cost_travel <- 10
+cost_travel <- 10000
 cost_patch <- cost_travel * distance_map + cost_fish
-price<-1.5
+price <- 1.5
 
 fishers<-4
 quota<-rep(10000000,year_n)
@@ -523,7 +513,7 @@ for(t in 1:(length(proj_period)-1))
   
   temp_imm_N<-imm_N_at_Len[,,,,t]
   temp_mat_N<-mat_N_at_Len[,,,,t]
-  #filled.contour(x=lon,y=rev(lat),g(temp_mat_N[,,1,5]),plot.axes=map(add=TRUE,fill=T,col='grey') )
+  # filled.contour(x=lon,y=rev(lat),g(temp_mat_N[,,1,5]),plot.axes=map(add=TRUE,fill=T,col='grey') )
   # if(survey_time[t]==1)
   #   collect_survey_data()
   
@@ -556,7 +546,7 @@ for(t in 1:(length(proj_period)-1))
       catch_patch[catch_patch>quota[f]]<-quota[f] # this makes it so they don't travel a long way if they can get it close
       
       #filled.contour(x=lon,y=rev(lat),g(catch_patch),plot.axes=map(add=TRUE,fill=T,col='grey') )
-      net_benefit_patch<-catch_patch*price - cost_patch
+      net_benefit_patch<-catch_patch*price-cost_patch
       
       #filled.contour(x=lon,y=rev(lat),g(net_benefit_patch),plot.axes=map(add=TRUE,fill=T,col='grey'),zlim=c(0,max(net_benefit_patch,na.rm=T)) )
       max_net_benefit<-which(net_benefit_patch==max(net_benefit_patch,na.rm=T),arr.ind=T)
@@ -568,7 +558,6 @@ for(t in 1:(length(proj_period)-1))
       # 
       #========================================================
       #==subtract catch from locations while quota is remaining
-      print("Begin quota")
       while(quota_remaining>0.1 & net_benefit_patch[chosen_patch[1],chosen_patch[2]]>0)
       {
         #==find closest, highest value, fishable patch
@@ -582,11 +571,10 @@ for(t in 1:(length(proj_period)-1))
           for(x in 1:length(sizes))
           {
             
-            if(print_messages) print(paste0("sex=",sex," | sizes=",x," | ",
-                                            " | temp_imm_N=",temp_imm_N[chosen_patch[1],chosen_patch[2],sex,x],
-                                            " | temp_mat_N=",temp_imm_N[chosen_patch[1],chosen_patch[2],sex,x],
-                                            " | potential catch= ",potential_catch))
-            
+            print(paste0("sex=",sex," | sizes=",x," | ",
+                         " | temp_imm_N=",temp_imm_N[chosen_patch[1],chosen_patch[2],sex,x],
+                         " | temp_mat_N=",temp_imm_N[chosen_patch[1],chosen_patch[2],sex,x],
+                         " | potential catch= ",potential_catch))
             potential_catch<-potential_catch + temp_imm_N[chosen_patch[1],chosen_patch[2],sex,x]*fish_sel[sex,x]*wt_at_len[sex,x] + 
               temp_mat_N[chosen_patch[1],chosen_patch[2],sex,x]*fish_sel[sex,x]*wt_at_len[sex,x]
           }
@@ -595,7 +583,7 @@ for(t in 1:(length(proj_period)-1))
         if(potential_catch<=quota_remaining)
         {
           
-          if(print_messages) print(paste0("potential_catch<=quota_remaining | potential_catch=",potential_catch,"| quota_remaining=",quota_remaining,"| use_harv=",use_harv))
+          print(paste0("potential_catch<=quota_remaining | potential_catch=",potential_catch,"| quota_remaining=",quota_remaining,"| use_harv=",use_harv))
           
           for(sex in 1:2)
             for(x in 1:length(sizes))
@@ -646,7 +634,7 @@ for(t in 1:(length(proj_period)-1))
               maxHarv<-use_harv
           }
           
-          if(print_messages) print(paste0("potential_catch<=quota_remaining | potential_catch=",potential_catch,"| quota_remaining=",quota_remaining,"| use_harv=",use_harv))
+          print(paste0("potential_catch<=quota_remaining | potential_catch=",potential_catch,"| quota_remaining=",quota_remaining,"| use_harv=",use_harv))
           
           
           temp_catch<-0
@@ -656,7 +644,8 @@ for(t in 1:(length(proj_period)-1))
               total_spatial_catch[chosen_patch[1],chosen_patch[2],sex,x,t] <- total_spatial_catch[chosen_patch[1],chosen_patch[2],sex,x,t] + 
                 temp_imm_N[chosen_patch[1],chosen_patch[2],sex,x]*fish_sel[sex,x]*use_harv + 
                 temp_mat_N[chosen_patch[1],chosen_patch[2],sex,x]*fish_sel[sex,x]*use_harv  
-
+              
+              
               temp_catch<- temp_imm_N[chosen_patch[1],chosen_patch[2],sex,x]*fish_sel[sex,x]*wt_at_len[sex,x]*use_harv + 
                 temp_mat_N[chosen_patch[1],chosen_patch[2],sex,x]*fish_sel[sex,x]*wt_at_len[sex,x]*use_harv
               
@@ -685,7 +674,6 @@ for(t in 1:(length(proj_period)-1))
         catch_patch[catch_patch>quota_remaining]<-quota_remaining
         net_benefit_patch<-catch_patch*price - cost_patch
       }
-      print("End quota")
       
       profit_by_fisher[chosen_patch[1],chosen_patch[2],t,f] <- sum(catch_by_fisher[chosen_patch[1],chosen_patch[2],,,t,f])*price - cost_by_fisher[chosen_patch[1],chosen_patch[2],t,f]
     }
@@ -922,7 +910,19 @@ for(t in 1:(length(proj_period)-1))
       {
         for(i in 1:length(sizes))
         {
-          if(land_mask[y,x]!=0)
+
+          if(size_class_settings == "rough" & EBS_mask_matrix[x,y] == 1){
+            
+            include_loc = F
+            
+          }else{
+            
+            include_loc = T
+            
+          }
+          
+          
+          if(land_mask[y,x]!=0 & include_loc)
           {
             
             # Need to implement observation pdf
@@ -981,6 +981,17 @@ for(t in 1:(length(proj_period)-1))
       {
         for(i in 1:length(sizes))
         {
+          
+          if(size_class_settings == "rough" & EBS_mask_matrix[x,y] == 1){
+            
+            include_loc = F
+            
+          }else{
+            
+            include_loc = T
+            
+          }
+          
           if(land_mask[y,x]!=0)
           {
             
