@@ -238,7 +238,7 @@ for(x in 1:length(lon))
       distance_map[y,x]<-costDistance(trCostC, pts[1,],pts[2,])
       if(distance_map[y,x]>10000)distance_map[y,x]<-NA
     }
-  }  
+  }
 # filled.contour(x=lon,y=rev(lat),g(distance_map*land_mask),plot.axes=c(map(add=TRUE,fill=T,col='grey'),
 #                                                                       points(y=port_lat,x=port_lon,pch=16,col='red')))
 #write.csv(distance_map,'dist.csv')
@@ -517,7 +517,7 @@ for(t in 1:(length(proj_period)-1))
           }
           
           if(terminal_molt==0)
-          { 
+          {
             #======================================
             #==make size transition matrix mature
             size_transition_mat_m_mat<-matrix(ncol=length(sizes),nrow=length(sizes))
@@ -582,7 +582,7 @@ for(t in 1:(length(proj_period)-1))
     tmp_rec_1<- matrix(rnorm(length(imm_N_at_Len[,,1,1,1]),1,1),ncol=ncol(imm_N_at_Len[,,1,1,1]),nrow=nrow(imm_N_at_Len[,,1,1,1]))
     tmp_rec_1[tmp_rec_1<0]<-0
     tmp_rec_2<- matrix(rnorm(length(imm_N_at_Len[,,2,1,1]),1,1),ncol=ncol(imm_N_at_Len[,,1,1,1]),nrow=nrow(imm_N_at_Len[,,2,1,1]))
-    tmp_rec_2[tmp_rec_2<0]<-0  
+    tmp_rec_2[tmp_rec_2<0]<-0
     
     for(r in 1:rec_sizes)
     {
