@@ -78,7 +78,7 @@ clim_sc =c("rcp45") # climate scenario to test
 
 ## Projection period
 #-------------------
-year_n	 <- 2
+year_n	 <- 10
 year_step <- 12
 proj_period	<- seq(1,year_step*year_n)
 Years_climsc <- rep(2022:(2022+year_n), each=year_step)
@@ -192,7 +192,7 @@ homoMov <- FALSE
 
 ## Stock assessment
 #------------------
-SA <- "spatialIPM"
+SA <- "GMACS"
 # "spatialIPM": spatially-explicit model IPM
 # "nonspatialIPM": non spatial model IPM
 # "GMACS": standard stock assessment model
@@ -489,12 +489,15 @@ for(x in 1:length(lon))
 #==this should be related to the amount of fish in a patch
 cost_fish <- 10
 
-cost_travel <- 10000
+cost_travel <- 10
 cost_patch <- cost_travel * distance_map + cost_fish
 price <- 1.5
 
-fishers<-1
-quota<-rep(10000000,year_n)
+fishers<-20
+quota<-rep(10000000,fishers)
+
+fishing_process="stochastic"
+# fishing_process="max_benefit_min_dist"
 
 #=============================================
 # PROJJEEEECCCT
@@ -512,13 +515,13 @@ profit_by_fisher_full = list()
 cost_by_fisher_full = list()
 all_net_benefit_patch_full = list()
 chosen_patch_full = list()
+all_chosen_patch_full = list()
 
 list_info = data.frame(it = 0,
                        cost_travel = 0)
 
-for(cost_travel in c(0,1000,1000*2)){
+for(cost_travel in 1000){ # c(0,1000,1000*2)
   
-
   total_spatial_catch<-array(0,dim=c(length(lat),length(lon),sexN,length(sizes),length(proj_period)))
   catch_by_fisher<-array(0,dim=c(length(lat),length(lon),sexN,length(sizes),length(proj_period),fishers))
   profit_by_fisher<-array(0,dim=c(length(lat),length(lon),length(proj_period),fishers))
@@ -564,30 +567,45 @@ for(cost_travel in c(0,1000,1000*2)){
               temp_mat_N[,,sex,x]*fish_sel[sex,x]*wt_at_len[sex,x]
           }
         
+        
+        
+        ## Choose fishing location
         catch_patch<-apply(temp_catch,c(1,2),sum)
-        catch_patch[catch_patch>quota[f]]<-quota[f] # this makes it so they don't travel a long way if they can get it close
-        
-        #filled.contour(x=lon,y=rev(lat),g(catch_patch),plot.axes=map(add=TRUE,fill=T,col='grey') )
+        catch_patch[catch_patch>quota[f]]<-quota[f] # this makes it so they don't travel a long way if they can get it close < # We could modify this
         net_benefit_patch<-catch_patch*price-cost_patch
-        
         all_net_benefit_patch[,,t,f] = net_benefit_patch
         
-        #filled.contour(x=lon,y=rev(lat),g(net_benefit_patch),plot.axes=map(add=TRUE,fill=T,col='grey'),zlim=c(0,max(net_benefit_patch,na.rm=T)) )
-        max_net_benefit<-which(net_benefit_patch==max(net_benefit_patch,na.rm=T),arr.ind=T)
-        chosen_patch<-max_net_benefit[which(distance_map[max_net_benefit]==min(distance_map[max_net_benefit])),]
-        # filled.contour(x=lon,y=rev(lat),g(net_benefitf_patch),
-        #               plot.axes=c(map(add=TRUE,fill=T,col='grey'),
-        #                          points(x=lon[chosen_patch[2]],y=lat[chosen_patch[1]],col=2,pch=16)),
-        #                                zlim=c(0,max(net_benefit_patch,na.rm=T)) )
-        # 
+        if(fishing_process == "max_benefit_min_dist"){
+          
+          max_net_benefit<-which(net_benefit_patch==max(net_benefit_patch,na.rm=T),arr.ind=T)
+          chosen_patch<-max_net_benefit[which(distance_map[max_net_benefit]==min(distance_map[max_net_benefit])),]
+          
+        }else if(fishing_process == "stochastic"){
+          
+          prob_net = net_benefit_patch[which(!is.na(net_benefit_patch) & net_benefit_patch > 0)]
+          chosen_patch<-which(net_benefit_patch == sample(prob_net,size=1,prob=),arr.ind=T)
+          chosen_patch=chosen_patch[1,]
+          
+        }
+        
         #========================================================
         #==subtract catch from locations while quota is remaining
         while(quota_remaining>0.1 & net_benefit_patch[chosen_patch[1],chosen_patch[2]]>0)
         {
-          #==find closest, highest value, fishable patch
-          max_net_benefit<-which(net_benefit_patch==max(net_benefit_patch,na.rm=T),arr.ind=T)
-          #==have to do this if there are two patches with identical net benefits
-          chosen_patch<-max_net_benefit[which(distance_map[max_net_benefit]==min(distance_map[max_net_benefit])),]
+          
+          if(fishing_process == "max_benefit_min_dist"){
+            
+            max_net_benefit<-which(net_benefit_patch==max(net_benefit_patch,na.rm=T),arr.ind=T)
+            chosen_patch<-max_net_benefit[which(distance_map[max_net_benefit]==min(distance_map[max_net_benefit])),]
+            
+          }else if(fishing_process == "stochastic"){
+            
+            prob_net = net_benefit_patch[which(!is.na(net_benefit_patch) & net_benefit_patch > 0)]
+            chosen_patch<-which(net_benefit_patch == sample(prob_net,size=1,prob=),arr.ind=T)
+            chosen_patch=chosen_patch[1,]
+            
+          }
+          
           if(is.array(chosen_patch)) all_chosen_patch[,t,f] = chosen_patch[1,]
           if(is.integer(chosen_patch) & length(chosen_patch) == 2) all_chosen_patch[,t,f] = chosen_patch
           
@@ -701,6 +719,7 @@ for(cost_travel in c(0,1000,1000*2)){
         }
         
         profit_by_fisher[chosen_patch[1],chosen_patch[2],t,f] <- sum(catch_by_fisher[chosen_patch[1],chosen_patch[2],,,t,f])*price - cost_by_fisher[chosen_patch[1],chosen_patch[2],t,f]
+        
       }
       
     }
@@ -1091,8 +1110,8 @@ tot_mat<-apply(mat_N_at_Len,c(5),sum,na.rm=T)
 
 x11()
 par(mfrow=c(4,1),mar=c(.1,.1,.1,.1),oma=c(4,.1,1,1))
-plot(tot_imm[100:length(tot_imm)],type='l',las=1,xaxt='n',ylim=c(0,max(tot_imm,tot_mat)))
-lines(tot_mat[100:length(tot_imm)],lty=2)
+plot(tot_imm,type='l',las=1,xaxt='n',ylim=c(0,max(tot_imm,tot_mat)))
+lines(tot_mat,lty=2)
 legend('topright',bty='n',lty=c(1,2),legend=c("Immature N","Mature N"))
 # plot(tot_catch,xaxt='n',las=1)
 # legend('right',bty='n',legend=c("Total catch"))
