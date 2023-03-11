@@ -18,6 +18,7 @@ library(raster)
 library(rnaturalearth)
 library(reshape2)
 library(sf)
+library(spdep)
 library(tidyverse)
 library(TMB)
 
@@ -43,11 +44,14 @@ attach(spatial_grid)
 # designate areas of potential habitat (i.e. not land)
 data(wrld_simpl)
 point_expand <- expand.grid(lon, lat)
+# plot(point_expand[,1],point_expand[,2])
+# text(point_expand[,1],point_expand[,2],labels = 1:nrow(point_expand))
 pts <- SpatialPoints(point_expand, proj4string=CRS(proj4string(wrld_simpl)))
 proj4string(wrld_simpl)<-CRS(proj4string(pts))
 ## Find which points fall over land
 land <- !is.na(over(pts, wrld_simpl)$FIPS)
 
+# Compute cell area
 test = rasterFromXYZ(cbind(point_expand,rep(rnorm(nrow(point_expand)),nrow(point_expand))), crs=CRS(proj4string(wrld_simpl)), digits=5)
 cell_area = raster::area(test) %>% as.matrix()
 
@@ -315,7 +319,7 @@ g<-function(m) t(m)[,nrow(m):1]
 land_mask[25:40,20:40]
 land_mask[31,32]<-0
 land_mask[32,29]<-0
-filled.contour(land_mask)
+# filled.contour(land_mask)
 
 filled.contour(x=lon,y=rev(lat),g(imm_N_at_Len[,,1,1,1]))
 #write.csv(land_mask,'landmask.csv')
@@ -413,10 +417,70 @@ weight_b_m<-3
 
 wt_at_len<-rbind(weight_a_f*sizes^weight_b_f,weight_a_m*sizes^weight_b_m)  
 
+
+## Movement
+#----------
 ## Movement at size
-#------------------
 move_len_50<-60
 move_len_95<-70
+
+## Movement matrices
+#-------------------
+# --> might need to make different matrices for mature and immature
+
+# Compute adjacency matrix
+A_gg = dnearneigh(point_expand,d1=0.45,d2=0.65)
+A_gg_mat = nb2mat(A_gg)
+A_gg_mat[which(A_gg_mat > 0)] = 1
+# plot(A_gg_mat[1:100,1:100])
+
+## Diffusion
+# D * DeltaT / A
+# with D: diffusion coefficient, here btwn 0.1 and 1.1 km(^2?) per day (Cf. Olmos et al. SM)
+# DeltaT: time interval btwn time steps, 
+# A: area of grid cells
+
+par(mfrow = c(3,2))
+D = 0.5
+DeltaT = (1/30) # convert day in month
+A = mean(cell_area)
+diffusion_coefficient = D * DeltaT / A
+
+diffusion_coefficient = 2 ^ 2
+
+diffusion_gg = A_gg_mat * diffusion_coefficient
+# plot(diffusion_gg[1:100,1:100], breaks=20)
+# hist(diffusion_gg)
+diag(diffusion_gg) = -1 * colSums(diffusion_gg)
+# plot(diffusion_gg[1:100,1:100], breaks=20)
+# hist(diffusion_gg)
+
+# Taxis
+model_mov = RMexp(scale = 40,var = 1)
+preference_g_mat = (as.matrix(RFsimulate(model_mov, lon, rev(lat), grid=TRUE))) # at the moment preference habitat is a simple RF --> should be fitted to data
+preference_g_mat = preference_g_mat - min(preference_g_mat)
+# plot(t(preference_g_mat), breaks=20)
+preference_g = as.vector(t(preference_g_mat))
+# # check
+# test = matrix(preference_g,nrow = 40,ncol = 40,byrow = T)
+# plot(test)
+
+taxis_gg = A_gg_mat * outer(preference_g, preference_g, "-") * DeltaT / sqrt(A)
+diag(taxis_gg) = -1 * colSums(taxis_gg)
+
+# Total
+mrate_gg = diffusion_gg + taxis_gg
+# plot(diffusion_gg[1:100,1:100],breaks=20)
+if( any(mrate_gg-diag(diag(mrate_gg))<0) ) stop("`mrate_gg` must be a Metzler matrix. Consider changing parameterization")
+
+mfraction_gg = Matrix::expm(mrate_gg)
+# test = matrix(mfraction_gg@x,nrow=mfraction_gg@Dim[1],ncol=mfraction_gg@Dim[2])
+# plot(test[1:100,1:100])
+
+stationary_g = eigen(mfraction_gg)$vectors[,1]
+stationary_g = stationary_g / sum(stationary_g)
+# test = matrix(stationary_g,nrow=40,ncol=40,byrow = T)
+# plot(test)
 
 ## Fishery selectivity
 #---------------------
@@ -429,7 +493,7 @@ fish_sel<-rbind(1/(1+exp(-log(19)*(sizes-fish_sel_50_f)/(fish_sel_95_f-fish_sel_
                 1/(1+exp(-log(19)*(sizes-fish_sel_50_m)/(fish_sel_95_m-fish_sel_50_m))))
 fish_sel[is.na(fish_sel)]<-0
 
-#==this function sets a dispersal kernel for every cell          
+#==this function sets a dispersal kernel for every cell
 #==sd is 'one grid square'  
 #source("movArray.R")
 #  movement_dispersal<-movArray(SpaceR=length(lat),SpaceC=length(lon),sdx=1,sdy=1)        
@@ -735,7 +799,46 @@ for(cost_travel in 1000){ # c(0,1000,1000*2)
     {
       #==two options: gaussian and temperature mediated
       #==gaussian
-      #==create disperal kernel for each space 
+      #==create disperal kernel for each space
+      for(sex in 1:2)
+        for(x in 1:length(sizes))
+        {
+          
+          # mov_imm_temp = temp_imm_N[,,sex,x]
+          # mov_mat_temp = temp_mat_N[,,sex,x]
+          # 
+          # mov_imm_v = mfraction_gg %*% as.vector(t(mov_imm_temp))
+          # mov_mat_v = mfraction_gg %*% as.vector(t(mov_imm_temp))
+          # 
+          # mov_imm_temp_2 = matrix(mov_imm_v, nrow = length(lat), ncol = length(lon),byrow = T)
+          # mov_mat_temp_2 = matrix(mov_mat_v, nrow = length(lat), ncol = length(lon),byrow = T)
+
+          # ## Check that movement happens
+          # par(mfrow = c(3,2))
+          # 
+          # mov_imm_temp = temp_imm_N[,,sex,x]
+          # mov_mat_temp = temp_mat_N[,,sex,x]
+          # 
+          # plot(mov_imm_temp,main=paste0("t = 0"),asp = 1)
+          # 
+          # for(t in 1:5){
+          # 
+          #   mov_imm_v =  mfraction_gg %*% as.vector(t(mov_imm_temp)) # mrate_gg %*%
+          #   mov_mat_v = mfraction_gg %*% as.vector(t(mov_mat_temp))  # mrate_gg %*%
+          # 
+          #   mov_imm_temp_2 = matrix(mov_imm_v, nrow = length(lat), ncol = length(lon),byrow = T)
+          #   mov_mat_temp_2 = matrix(mov_mat_v, nrow = length(lat), ncol = length(lon),byrow = T)
+          # 
+          #   # print(which((mov_imm_temp != mov_mat_temp_2)))
+          # 
+          #   mov_imm_temp = mov_imm_temp_2
+          #   mov_mat_temp = mov_mat_temp_2
+          #   
+          #   plot(mov_imm_temp,main=paste0("t = ",t),asp = 1)
+          #   
+          # }
+
+        }
       
     }
     
@@ -1001,6 +1104,7 @@ for(cost_travel in 1000){ # c(0,1000,1000*2)
       
     }
     
+    
     #==Stock assessment
     # "spatialIPM": spatially-explicit model IPM
     # "nonspatialIPM": non spatial model IPM
@@ -1060,14 +1164,13 @@ for(cost_travel in 1000){ # c(0,1000,1000*2)
       catch_df$size_bin = as.character(catch_df$size_bin)
       catch_N = rbind(catch_N,catch_df)
       
-      
       print("Make Stock assessment")
       
       if(SA == "spatialIPM"){
         
         print("spatial IPM")
         
-        # source(paste0(project_spatialIPM,"03_spatial_model/run_model_mse.R"))
+        source(paste0(project_spatialIPM,"03_spatial_model/run_model_mse.R"))
         
       }
       

@@ -12,9 +12,10 @@ rm(list=ls())
 #==or start the model at the point that they are already only molting once a year
 #==and the size they enter the model change based on the temperature during the time period
 library(gdistance)
-library(raster)
 library(maps)
 library(maptools)
+library(plot.matrix)
+library(raster)
 #==Set model variables
 lat		   <-seq(70,51.5,-.25)
 lon		   <-seq(-179,-155,.5)
@@ -53,9 +54,10 @@ data(wrld_simpl)
 
 ## Create a SpatialPoints object
 set.seed(0)
-point_expand <- expand.grid(lon, lat)  
+point_expand <- expand.grid(lon, lat)
 pts <- SpatialPoints(point_expand, proj4string=CRS(proj4string(wrld_simpl)))
 proj4string(wrld_simpl)<-CRS(proj4string(pts))
+
 ## Find which points fall over land
 land <- !is.na(over(pts, wrld_simpl)$FIPS)
 

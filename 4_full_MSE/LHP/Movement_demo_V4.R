@@ -32,7 +32,9 @@ mfraction_gg = Matrix::expm(mrate_gg)
 matplot( scale(cbind(lat_g,Temp_g,preference_g,mfraction_gg[,ceiling(0.25*n_g)],mfraction_gg[,ceiling(0.75*n_g)])), type="l", lty="solid", lwd=2 )
 
 #
-Matrix::image(mfraction_gg, xlab="From", ylab="To")
+Matrix::image(mfraction_gg[1:150,1:150], xlab="From", ylab="To",breaks = )
+test = matrix(mfraction_gg@x,nrow = mfraction_gg@Dim[1],ncol = mfraction_gg@Dim[2])
+plot(test)
 
 # Stationary distribution
 stationary_g = eigen(mfraction_gg)$vectors[,1]
@@ -50,4 +52,16 @@ mean1 = weighted.mean(1:n_g, w=mfraction_gg[,ceiling(n_g/2)])
 # sum( mfraction_gg[,6] * (1:n_g-mean1)^2 )
 (var1 = weighted.mean( (1:n_g-mean1)^2, w=mfraction_gg[,ceiling(n_g/2)]) )
 diffusion_coefficient * 2  # 2*D because variance of displacement is 2*D in one-dimension
+
+# ----------------------------------------------------------------------------------------
+
+
+
+
+
+
+
+
+
+
 
