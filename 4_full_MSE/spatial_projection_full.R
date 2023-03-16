@@ -44,6 +44,7 @@ attach(spatial_grid)
 # designate areas of potential habitat (i.e. not land)
 data(wrld_simpl)
 point_expand <- expand.grid(lon, lat)
+point_expand$key = 1:nrow(point_expand)
 # plot(point_expand[,1],point_expand[,2])
 # text(point_expand[,1],point_expand[,2],labels = 1:nrow(point_expand))
 pts <- SpatialPoints(point_expand, proj4string=CRS(proj4string(wrld_simpl)))
@@ -74,24 +75,21 @@ EBS_mask = is.na(over(pts, EBS_sp)$Include)
 # plot(wrld_simpl,xlim = c(min(lon), max(lon)), ylim = c(min(lat),max(lat)))
 # points(pts, col=1+land, pch=16)
 
-
 ## Climate scenarios 
 #-------------------
 clim_sc =c("rcp45") # climate scenario to test
 
-
 ## Projection period
 #-------------------
-year_n	 <- 10
+year_n	 <- 50
 year_step <- 12
 proj_period	<- seq(1,year_step*year_n)
 Years_climsc <- rep(2022:(2022+year_n), each=year_step)
 n_t <- length(proj_period)
 
-
 ## Size class settings
 #---------------------
-size_class_settings <- "rough"
+size_class_settings <- "fine"
 # either "fine" (5 cm per 5 cm like GMACS)
 # or "rough" (4 size classes accordingly to the IPM)
 # In spatial IPM, size classes are: 0 < size1 =<40 / 40 < size 2 =< 78 / 78<size3 =<101 / 101<size4
@@ -146,7 +144,7 @@ SA_time       <-rep(c(0,0,0,0,0,0,0,0,0,1,0,0),year_n)
 ## Survey data
 #-------------
 ## Load survey data for sampling locations
-load(paste0(project_spatialIPM,'02_transformed_data/survey/Data_Geostat_4class.RData'))
+load('4_full_MSE/data/Data_Geostat_4class.RData')
 
 DF <- as_tibble(Data_Geostat)
 
@@ -236,7 +234,78 @@ mat_N_at_Len<-array(dim=c(length(lat),length(lon),sexN,length(sizes),length(proj
 load(file="1_OM_Cody_version0/smooth_mat_N_at_Len_2017.RData") # smooth_mat
 load(file="1_OM_Cody_version0/smooth_imm_N_at_Len_2017.RData") # smooth_imm
 
-#==FIX THIS SO THAT THESE DISTRIBUTIONS ARE MADE TO TRUE DISTRIBUTIONS AND MULTIPLIED BY NUMBERS AT LENGTH FROM ASSESSMENT
+## Initialization data
+ebs_2019 <- read_csv("4_full_MSE/data/ebs_2019.csv")
+nbs_2019 <- read_csv("4_full_MSE/data/nbs_2019.csv")
+
+ebs_2019_2 = ebs_2019 %>% 
+  mutate(area = "ebs") %>% 
+  mutate(stage = ifelse(WIDTH < 45,"Juv",'Mat')) %>% 
+  dplyr::group_by(HAUL,MID_LATITUDE,MID_LONGITUDE,stage,area) %>% 
+  tally()
+
+nbs_2019_2 = nbs_2019 %>% 
+  mutate(area = "nbs") %>% 
+  mutate(stage = ifelse(WIDTH < 45,"Juv",'Mat')) %>% 
+  dplyr::group_by(HAUL,MID_LATITUDE,MID_LONGITUDE,stage,area) %>% 
+  tally()
+
+count_df = rbind(ebs_2019_2,nbs_2019_2)
+
+lat_range = range(count_df$MID_LATITUDE)
+lon_range = range(count_df$MID_LONGITUDE)
+
+Juv_plot = ggplot(count_df[which(count_df$stage == "Juv"),])+
+  geom_point(aes(x=MID_LONGITUDE,y=MID_LATITUDE,col=log(n)),size = 2)+
+  scale_color_distiller(palette = "Spectral")+
+  ggtitle("Juveniles")+
+  xlim(lon_range)+ylim(lat_range) # + facet_wrap(.~area)
+
+Mat_plot = ggplot(count_df[which(count_df$stage == "Mat"),])+
+  geom_point(aes(x=MID_LONGITUDE,y=MID_LATITUDE,col=log(n)),size = 2)+
+  scale_color_distiller(palette = "Spectral")+
+  ggtitle("Mature")+
+  xlim(lon_range)+ylim(lat_range) # + facet_wrap(.~area)
+
+point_sf = st_as_sf(point_expand,coords = c("Var1","Var2"))
+raster_dom = st_rasterize(point_sf %>% dplyr::select(key, geometry))
+grid_sf = st_as_sf(raster_dom)
+
+count_sf = st_as_sf(count_df,coords = c("MID_LONGITUDE","MID_LATITUDE"))
+test = st_intersection(grid_sf,count_sf) %>%
+  as.data.frame %>% 
+  group_by(key,stage) %>%
+  dplyr::summarise(n = mean(n)) %>% 
+  full_join(grid_sf) %>%
+  filter(!is.na(n)) %>% 
+  filter(!is.na(stage)) %>% 
+  st_as_sf
+
+ggplot()+
+  geom_sf(data=test,aes(fill=n))+
+  scale_fill_distiller(palette="Spectral")+
+  facet_wrap(.~stage)
+
+init_mature<-array(0,dim=c(length(lat),length(lon)))
+init_immature<-array(0,dim=c(length(lat),length(lon)))
+
+for(x in 1:length(lat))
+  for(y in 1:length(lon))
+  {
+    
+    key = point_expand$key[which(point_expand$Var1 == lon[y] & point_expand$Var2 == lat[x])]
+    test_mat = test$n[test$key == key & test$stage == "Mat"]
+    test_immat = test$n[test$key == key & test$stage == "Juv"]
+    if(length(test_mat) > 0) init_mature[x,y] = test$n[test$key == key & test$stage == "Mat"]
+    if(length(test_immat) > 0) init_immature[x,y] = test$n[test$key == key & test$stage == "Juv"]
+
+  }
+
+init_mature = init_mature / sum(init_mature)
+init_immature = init_immature / sum(init_immature)
+
+# cowplot::plot_grid(Juv_plot,Mat_plot)
+
 if(size_class_settings=="fine"){
   imm_N_at_Len[,,,,1]<-exp(smooth_imm)
   mat_N_at_Len[,,,,1]<-exp(smooth_mat)
@@ -276,17 +345,17 @@ if(fake_dist_data==1)
 {
   #==set dummy initial distribution--take this from the survey for real
   #==this is only for getting mechanics down
-  imm_N_at_Len[,,1,1,1]<-rnorm(dim(imm_N_at_Len[,,1,1,1])[1]*dim(imm_N_at_Len[,,1,1,1])[2],1000,100)
-  imm_N_at_Len[,,2,1,1]<-rnorm(dim(imm_N_at_Len[,,1,1,1])[1]*dim(imm_N_at_Len[,,1,1,1])[2],1000,100)
-  mat_N_at_Len[,,1,1,1]<-rnorm(dim(imm_N_at_Len[,,1,1,1])[1]*dim(imm_N_at_Len[,,1,1,1])[2],1000,100)
-  mat_N_at_Len[,,2,1,1]<-rnorm(dim(imm_N_at_Len[,,1,1,1])[1]*dim(imm_N_at_Len[,,1,1,1])[2],1000,100)
+  imm_N_at_Len[,,1,1,1]<-test_immat
+  imm_N_at_Len[,,2,1,1]<-test_immat
+  mat_N_at_Len[,,1,1,1]<-test_mat
+  mat_N_at_Len[,,2,1,1]<-test_mat
   
   for(x in 2:length(sizes))
   {
-    imm_N_at_Len[,,1,x,1]<-imm_N_at_Len[,,1,x-1,1]*exp(-M)
-    imm_N_at_Len[,,2,x,1]<-imm_N_at_Len[,,2,x-1,1]*exp(-M)
-    mat_N_at_Len[,,1,x,1]<-mat_N_at_Len[,,1,x-1,1]*exp(-M)
-    mat_N_at_Len[,,2,x,1]<-mat_N_at_Len[,,2,x-1,1]*exp(-M)
+    imm_N_at_Len[,,1,x,1]<-test_immat
+    imm_N_at_Len[,,2,x,1]<-test_immat
+    mat_N_at_Len[,,1,x,1]<-test_mat
+    mat_N_at_Len[,,2,x,1]<-test_mat
   }
   
 }
@@ -321,7 +390,7 @@ land_mask[31,32]<-0
 land_mask[32,29]<-0
 # filled.contour(land_mask)
 
-filled.contour(x=lon,y=rev(lat),g(imm_N_at_Len[,,1,1,1]))
+# filled.contour(x=lon,y=rev(lat),g(imm_N_at_Len[,,1,1,1]))
 #write.csv(land_mask,'landmask.csv')
 
 #==ensures no critters on land
@@ -427,60 +496,65 @@ move_len_95<-70
 ## Movement matrices
 #-------------------
 # --> might need to make different matrices for mature and immature
+compute_movement_matrix = F
 
-# Compute adjacency matrix
-A_gg = dnearneigh(point_expand,d1=0.45,d2=0.65)
-A_gg_mat = nb2mat(A_gg)
-A_gg_mat[which(A_gg_mat > 0)] = 1
-# plot(A_gg_mat[1:100,1:100])
-
-## Diffusion
-# D * DeltaT / A
-# with D: diffusion coefficient, here btwn 0.1 and 1.1 km(^2?) per day (Cf. Olmos et al. SM)
-# DeltaT: time interval btwn time steps, 
-# A: area of grid cells
-
-par(mfrow = c(3,2))
-D = 0.5
-DeltaT = (1/30) # convert day in month
-A = mean(cell_area)
-diffusion_coefficient = D * DeltaT / A
-
-diffusion_coefficient = 2 ^ 2
-
-diffusion_gg = A_gg_mat * diffusion_coefficient
-# plot(diffusion_gg[1:100,1:100], breaks=20)
-# hist(diffusion_gg)
-diag(diffusion_gg) = -1 * colSums(diffusion_gg)
-# plot(diffusion_gg[1:100,1:100], breaks=20)
-# hist(diffusion_gg)
-
-# Taxis
-model_mov = RMexp(scale = 40,var = 1)
-preference_g_mat = (as.matrix(RFsimulate(model_mov, lon, rev(lat), grid=TRUE))) # at the moment preference habitat is a simple RF --> should be fitted to data
-preference_g_mat = preference_g_mat - min(preference_g_mat)
-# plot(t(preference_g_mat), breaks=20)
-preference_g = as.vector(t(preference_g_mat))
-# # check
-# test = matrix(preference_g,nrow = 40,ncol = 40,byrow = T)
-# plot(test)
-
-taxis_gg = A_gg_mat * outer(preference_g, preference_g, "-") * DeltaT / sqrt(A)
-diag(taxis_gg) = -1 * colSums(taxis_gg)
-
-# Total
-mrate_gg = diffusion_gg + taxis_gg
-# plot(diffusion_gg[1:100,1:100],breaks=20)
-if( any(mrate_gg-diag(diag(mrate_gg))<0) ) stop("`mrate_gg` must be a Metzler matrix. Consider changing parameterization")
-
-mfraction_gg = Matrix::expm(mrate_gg)
-# test = matrix(mfraction_gg@x,nrow=mfraction_gg@Dim[1],ncol=mfraction_gg@Dim[2])
-# plot(test[1:100,1:100])
-
-stationary_g = eigen(mfraction_gg)$vectors[,1]
-stationary_g = stationary_g / sum(stationary_g)
-# test = matrix(stationary_g,nrow=40,ncol=40,byrow = T)
-# plot(test)
+if(compute_movement_matrix){
+  
+  # Compute adjacency matrix
+  A_gg = dnearneigh(point_expand,d1=0.45,d2=0.65)
+  A_gg_mat = nb2mat(A_gg)
+  A_gg_mat[which(A_gg_mat > 0)] = 1
+  # plot(A_gg_mat[1:100,1:100])
+  
+  ## Diffusion
+  # D * DeltaT / A
+  # with D: diffusion coefficient, here btwn 0.1 and 1.1 km(^2?) per day (Cf. Olmos et al. SM)
+  # DeltaT: time interval btwn time steps, 
+  # A: area of grid cells
+  
+  par(mfrow = c(3,2))
+  D = 0.5
+  DeltaT = (1/30) # convert day in month
+  A = mean(cell_area)
+  diffusion_coefficient = D * DeltaT / A
+  
+  diffusion_coefficient = 2 ^ 2
+  
+  diffusion_gg = A_gg_mat * diffusion_coefficient
+  # plot(diffusion_gg[1:100,1:100], breaks=20)
+  # hist(diffusion_gg)
+  diag(diffusion_gg) = -1 * colSums(diffusion_gg)
+  # plot(diffusion_gg[1:100,1:100], breaks=20)
+  # hist(diffusion_gg)
+  
+  # Taxis
+  model_mov = RMexp(scale = 40,var = 1)
+  preference_g_mat = (as.matrix(RFsimulate(model_mov, lon, rev(lat), grid=TRUE))) # at the moment preference habitat is a simple RF --> should be fitted to data
+  preference_g_mat = preference_g_mat - min(preference_g_mat)
+  # plot(t(preference_g_mat), breaks=20)
+  preference_g = as.vector(t(preference_g_mat))
+  # # check
+  # test = matrix(preference_g,nrow = 40,ncol = 40,byrow = T)
+  # plot(test)
+  
+  taxis_gg = A_gg_mat * outer(preference_g, preference_g, "-") * DeltaT / sqrt(A)
+  diag(taxis_gg) = -1 * colSums(taxis_gg)
+  
+  # Total
+  mrate_gg = diffusion_gg + taxis_gg
+  # plot(diffusion_gg[1:100,1:100],breaks=20)
+  if( any(mrate_gg-diag(diag(mrate_gg))<0) ) stop("`mrate_gg` must be a Metzler matrix. Consider changing parameterization")
+  
+  mfraction_gg = Matrix::expm(mrate_gg)
+  # test = matrix(mfraction_gg@x,nrow=mfraction_gg@Dim[1],ncol=mfraction_gg@Dim[2])
+  # plot(test[1:100,1:100])
+  
+  stationary_g = eigen(mfraction_gg)$vectors[,1]
+  stationary_g = stationary_g / sum(stationary_g)
+  # test = matrix(stationary_g,nrow=40,ncol=40,byrow = T)
+  # plot(test)
+  
+}
 
 ## Fishery selectivity
 #---------------------
@@ -584,6 +658,8 @@ all_chosen_patch_full = list()
 list_info = data.frame(it = 0,
                        cost_travel = 0)
 
+max_quota_it = 500 # maximum iteration for filling the quota
+use_harv = 1
 for(cost_travel in 1000){ # c(0,1000,1000*2)
   
   total_spatial_catch<-array(0,dim=c(length(lat),length(lon),sexN,length(sizes),length(proj_period)))
@@ -647,15 +723,18 @@ for(cost_travel in 1000){ # c(0,1000,1000*2)
         }else if(fishing_process == "stochastic"){
           
           prob_net = net_benefit_patch[which(!is.na(net_benefit_patch) & net_benefit_patch > 0)]
-          chosen_patch<-which(net_benefit_patch == sample(prob_net,size=1,prob=),arr.ind=T)
+          chosen_patch<-which(net_benefit_patch == sample(prob_net,size=1,prob=prob_net),arr.ind=T)
           chosen_patch=chosen_patch[1,]
           
         }
         
         #========================================================
         #==subtract catch from locations while quota is remaining
-        while(quota_remaining>0.1 & net_benefit_patch[chosen_patch[1],chosen_patch[2]]>0)
+        quota_it = 1
+        while(quota_it < max_quota_it & quota_remaining>0.1 & net_benefit_patch[chosen_patch[1],chosen_patch[2]]>0)
         {
+          
+          quota_it = quota_it + 1
           
           if(fishing_process == "max_benefit_min_dist"){
             
@@ -678,10 +757,10 @@ for(cost_travel in 1000){ # c(0,1000,1000*2)
           for(sex in 1:2)
             for(x in 1:length(sizes))
             {
-              print(paste0("sex=",sex," | sizes=",x," | ",
-                           " | temp_imm_N=",temp_imm_N[chosen_patch[1],chosen_patch[2],sex,x],
-                           " | temp_mat_N=",temp_imm_N[chosen_patch[1],chosen_patch[2],sex,x],
-                           " | potential catch= ",potential_catch))
+              if(print_messages) print(paste0("sex=",sex," | sizes=",x," | ",
+                                             " | temp_imm_N=",temp_imm_N[chosen_patch[1],chosen_patch[2],sex,x],
+                                             " | temp_mat_N=",temp_imm_N[chosen_patch[1],chosen_patch[2],sex,x],
+                                             " | potential catch= ",potential_catch))
               potential_catch<-potential_catch + temp_imm_N[chosen_patch[1],chosen_patch[2],sex,x]*fish_sel[sex,x]*wt_at_len[sex,x] + 
                 temp_mat_N[chosen_patch[1],chosen_patch[2],sex,x]*fish_sel[sex,x]*wt_at_len[sex,x]
             }
@@ -690,7 +769,7 @@ for(cost_travel in 1000){ # c(0,1000,1000*2)
           if(potential_catch<=quota_remaining)
           {
             
-            print(paste0("potential_catch<=quota_remaining | potential_catch=",potential_catch,"| quota_remaining=",quota_remaining,"| use_harv=",use_harv))
+            if(print_messages) print(paste0("potential_catch<=quota_remaining | potential_catch=",potential_catch,"| quota_remaining=",quota_remaining,"| use_harv=",use_harv))
             
             for(sex in 1:2)
               for(x in 1:length(sizes))
@@ -741,7 +820,7 @@ for(cost_travel in 1000){ # c(0,1000,1000*2)
                 maxHarv<-use_harv
             }
             
-            print(paste0("potential_catch<=quota_remaining | potential_catch=",potential_catch,"| quota_remaining=",quota_remaining,"| use_harv=",use_harv))
+            if(print_messages) print(paste0("potential_catch<=quota_remaining | potential_catch=",potential_catch,"| quota_remaining=",quota_remaining,"| use_harv=",use_harv))
             
             
             temp_catch<-0
@@ -870,7 +949,6 @@ for(cost_travel in 1000){ # c(0,1000,1000*2)
             
             if(land_mask[x,y]!=0)
             {
-              #==this is where Max's maps could be implemented
               #==plug temp into growth curve
               f_postmolt_imm<-alpha_grow_f_imm + beta_grow_f_imm*sizes
               m_postmolt_imm<-alpha_grow_m_imm + beta_grow_m_imm*sizes
@@ -1048,7 +1126,7 @@ for(cost_travel in 1000){ # c(0,1000,1000*2)
     ###############################
     if(survey_time[t] == 1){
       
-      print("Simulate scientific data")
+      if(print_messages) print("Simulate scientific data")
       ## Implemented through matrix because much faster
       sci_it = 0
       for(x in 1:length(lat))
@@ -1111,7 +1189,7 @@ for(cost_travel in 1000){ # c(0,1000,1000*2)
     # "GMACS": standard stock assessment model
     if(SA_time[t] == 1){
       
-      print("Make commercial data")
+      if(print_messages) print("Make commercial data")
       
       com_it = 0
       for(x in 1:length(lat))
@@ -1164,11 +1242,11 @@ for(cost_travel in 1000){ # c(0,1000,1000*2)
       catch_df$size_bin = as.character(catch_df$size_bin)
       catch_N = rbind(catch_N,catch_df)
       
-      print("Make Stock assessment")
+      if(print_messages) print("Make Stock assessment")
       
       if(SA == "spatialIPM"){
         
-        print("spatial IPM")
+        if(display_print) print("spatial IPM")
         
         source(paste0(project_spatialIPM,"03_spatial_model/run_model_mse.R"))
         
@@ -1213,8 +1291,8 @@ tot_mat<-apply(mat_N_at_Len,c(5),sum,na.rm=T)
 
 x11()
 par(mfrow=c(4,1),mar=c(.1,.1,.1,.1),oma=c(4,.1,1,1))
-plot(tot_imm,type='l',las=1,xaxt='n',ylim=c(0,max(tot_imm,tot_mat)))
-lines(tot_mat,lty=2)
+plot(tot_imm[100:length(tot_imm)],type='l',las=1,xaxt='n',ylim=c(0,max(tot_imm,tot_mat)))
+lines(tot_mat[100:length(tot_imm)],lty=2)
 legend('topright',bty='n',lty=c(1,2),legend=c("Immature N","Mature N"))
 # plot(tot_catch,xaxt='n',las=1)
 # legend('right',bty='n',legend=c("Total catch"))
@@ -1222,7 +1300,7 @@ legend('topright',bty='n',lty=c(1,2),legend=c("Immature N","Mature N"))
 # legend('right',bty='n',legend=c("Total cost"))
 # plot(tot_profit,xaxt='n',las=1)
 # legend('right',bty='n',legend=c("Total profits"))
-plot(tot_catch[(tot_profit>0)],xaxt='n',las=1,type='b',pch=16,ylim=c(0,60000000))
+plot(tot_catch[(tot_profit>0)],xaxt='n',las=1,type='b',pch=16,ylim=c(0,max(tot_catch)))
 legend('right',bty='n',legend=c("Total catch"))
 plot(tot_cost[(tot_profit>0)],xaxt='n',las=1,type='b',pch=16)
 legend('right',bty='n',legend=c("Total cost"))
