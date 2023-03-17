@@ -345,17 +345,17 @@ if(fake_dist_data==1)
 {
   #==set dummy initial distribution--take this from the survey for real
   #==this is only for getting mechanics down
-  imm_N_at_Len[,,1,1,1]<-test_immat
-  imm_N_at_Len[,,2,1,1]<-test_immat
-  mat_N_at_Len[,,1,1,1]<-test_mat
-  mat_N_at_Len[,,2,1,1]<-test_mat
+  imm_N_at_Len[,,1,1,1]<-test_immat * 500000
+  imm_N_at_Len[,,2,1,1]<-test_immat * 500000
+  mat_N_at_Len[,,1,1,1]<-test_mat * 500000
+  mat_N_at_Len[,,2,1,1]<-test_mat * 500000
   
   for(x in 2:length(sizes))
   {
-    imm_N_at_Len[,,1,x,1]<-test_immat
-    imm_N_at_Len[,,2,x,1]<-test_immat
-    mat_N_at_Len[,,1,x,1]<-test_mat
-    mat_N_at_Len[,,2,x,1]<-test_mat
+    imm_N_at_Len[,,1,x,1]<-test_immat * 500000
+    imm_N_at_Len[,,2,x,1]<-test_immat * 500000
+    mat_N_at_Len[,,1,x,1]<-test_mat * 500000
+    mat_N_at_Len[,,2,x,1]<-test_mat * 500000
   }
   
 }
@@ -1291,8 +1291,8 @@ tot_mat<-apply(mat_N_at_Len,c(5),sum,na.rm=T)
 
 x11()
 par(mfrow=c(4,1),mar=c(.1,.1,.1,.1),oma=c(4,.1,1,1))
-plot(tot_imm[100:length(tot_imm)],type='l',las=1,xaxt='n',ylim=c(0,max(tot_imm,tot_mat)))
-lines(tot_mat[100:length(tot_imm)],lty=2)
+plot(tot_imm,type='l',las=1,xaxt='n',ylim=c(0,max(tot_imm,tot_mat)))
+lines(tot_mat,lty=2)
 legend('topright',bty='n',lty=c(1,2),legend=c("Immature N","Mature N"))
 # plot(tot_catch,xaxt='n',las=1)
 # legend('right',bty='n',legend=c("Total catch"))
