@@ -56,7 +56,6 @@ growth_param[1:6,] <- growth_param[1:6,] %>%
                 paste("Female", c("alpha", "beta", "scale"), sep = "_")))  %>% 
   dplyr::mutate(model = "Increment")
 
-
 growth_param[7:dim(growth_param)[1],] <- growth_param[7:dim(growth_param)[1],] %>% 
   dplyr::mutate(Parameter = c(paste(rep(c("Male_SC", "female_SC"), each = length(repfile$mid_points)),
       rep(1:length(repfile$mid_points), 2), sep="_")))  %>% 

@@ -462,20 +462,24 @@ growth_model <- "cody_model" # "max_model" "cody_model"
 # Cody's model --> non-spatial life-history parameters
 # Maxime's model --> spatially varying life-history parameters
 
+growth_param_est = growth_param[1:6,] %>% 
+  dplyr::select(Estimate) %>% 
+  unlist
+
 if(growth_model == "cody_model"){
   
   #==Cody's growth parameterization for generation of non spatially varying growth parameters
-  alpha_grow_f_imm<-4
-  alpha_grow_m_imm<-7
-  beta_grow_f_imm<-1.05
-  beta_grow_m_imm<-1.1
+  alpha_grow_f_imm<-4 # growth_param_est[4]
+  alpha_grow_m_imm<-7 # growth_param_est[1]
+  beta_grow_f_imm<-1.05 # growth_param_est[5]
+  beta_grow_m_imm<-1.1 # growth_param_est[2]
   
-  alpha_grow_f_mat<-4
-  alpha_grow_m_mat<-7
-  beta_grow_f_mat<-1.05
-  beta_grow_m_mat<-1.1
+  alpha_grow_f_mat<-4 # growth_param_est[4]
+  alpha_grow_m_mat<-7 # growth_param_est[1]
+  beta_grow_f_mat<-1.05 # growth_param_est[5]
+  beta_grow_m_mat<-1.1 # growth_param_est[2]
   
-  growth_sd_imm<-c(5,4)
+  growth_sd_imm<-c(5,4) # Where to find better values?
   growth_sd_mat<-c(5,4)
 
 }
@@ -576,7 +580,7 @@ if(compute_movement_matrix){
   
   ## Taxis for juveniles
   #---------------------
-  taxis_coef_juv = 10^5 # This value is set so that movement happen rapidly enough --> should be refined by some ecological considerations
+  taxis_coef_juv = 10^3 # This value is set so that movement happen rapidly enough --> should be refined by some ecological considerations
   preference_g_juv = (init_juv - mean(init_juv)) / sd(init_juv)
   # plot(t(preference_g_juv), breaks=20)
   preference_g_juv = as.vector(t(preference_g_juv))
@@ -601,7 +605,7 @@ if(compute_movement_matrix){
 
   ## Taxis for adults
   #------------------
-  taxis_coef_ad = 10^5 # This value is set so that movement happen rapidly enough --> should be refined by some ecological considerations
+  taxis_coef_ad = 10^3 # This value is set so that movement happen rapidly enough --> should be refined by some ecological considerations
   preference_g_ad = (init_adult - mean(init_adult)) / sd(init_adult)
   preference_g_ad = as.vector(t(preference_g_ad))
   # # check
@@ -633,7 +637,7 @@ selec_curve = repfile$selectivity$Start_Y %>%
   filter(fleet == 1) %>% 
   dplyr::select_at(vars(starts_with("SizeC_")))
 
-fish_sel = 
+fish_sel = selec_curve
 
 # fish_sel_50_f<-NA
 # fish_sel_95_f<-NA
@@ -702,9 +706,9 @@ for(x in 1:length(lon))
 # calculate costs to fish
 #=============================================
 #==this should be related to the amount of fish in a patch
-cost_fish <- 10
+cost_fish <- 0
 
-cost_travel <- 10
+cost_travel <- 0
 cost_patch <- cost_travel * distance_map + cost_fish
 price <- 1.5
 
@@ -985,8 +989,7 @@ for(cost_travel in 1000){ # c(0,1000,1000*2)
           
           temp_imm_N[,,sex,x] = mov_imm_temp_2
           temp_mat_N[,,sex,x] = mov_mat_temp_2
-          
-          
+
           # ## Check that movement happens
           # x11()
           # par(mfrow = c(3,2))
