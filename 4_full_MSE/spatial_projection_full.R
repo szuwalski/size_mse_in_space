@@ -19,6 +19,7 @@ library(rnaturalearth)
 library(reshape2)
 library(sf)
 library(spdep)
+library(stars)
 library(tidyverse)
 library(TMB)
 
@@ -77,7 +78,7 @@ EBS_mask = is.na(over(pts, EBS_sp)$Include)
 
 ## Climate scenarios 
 #-------------------
-clim_sc =c("rcp45") # climate scenario to test
+clim_sc = c("rcp45") # climate scenario to test
 
 ## Projection period
 #-------------------
@@ -86,6 +87,10 @@ year_step <- 12
 proj_period	<- seq(1,year_step*year_n)
 Years_climsc <- rep(2022:(2022+year_n), each=year_step)
 n_t <- length(proj_period)
+
+## Load GMACS outputs for parameterizing
+#---------------------------------------
+load(file = "4_full_MSE/data/Snow_GMACS_repfile.Rdata")
 
 ## Size class settings
 #---------------------
@@ -108,6 +113,7 @@ if(size_class_settings == "rough"){
   n_p <- as.numeric(length(sizes))
 }
 
+ad_size = 45 # size at which crabs are considered mature
 
 ## Sex and maturity
 #------------------
@@ -286,8 +292,8 @@ ggplot()+
   scale_fill_distiller(palette="Spectral")+
   facet_wrap(.~stage)
 
-init_mature<-array(0,dim=c(length(lat),length(lon)))
-init_immature<-array(0,dim=c(length(lat),length(lon)))
+init_adult<-array(0,dim=c(length(lat),length(lon)))
+init_juv<-array(0,dim=c(length(lat),length(lon)))
 
 for(x in 1:length(lat))
   for(y in 1:length(lon))
@@ -296,19 +302,19 @@ for(x in 1:length(lat))
     key = point_expand$key[which(point_expand$Var1 == lon[y] & point_expand$Var2 == lat[x])]
     test_mat = test$n[test$key == key & test$stage == "Mat"]
     test_immat = test$n[test$key == key & test$stage == "Juv"]
-    if(length(test_mat) > 0) init_mature[x,y] = test$n[test$key == key & test$stage == "Mat"]
-    if(length(test_immat) > 0) init_immature[x,y] = test$n[test$key == key & test$stage == "Juv"]
+    if(length(test_mat) > 0) init_adult[x,y] = test$n[test$key == key & test$stage == "Mat"]
+    if(length(test_immat) > 0) init_juv[x,y] = test$n[test$key == key & test$stage == "Juv"]
 
   }
 
-init_mature = init_mature / sum(init_mature)
-init_immature = init_immature / sum(init_immature)
+init_adult = init_adult / sum(init_adult)
+init_juv = init_juv / sum(init_juv)
 
 # cowplot::plot_grid(Juv_plot,Mat_plot)
 
 if(size_class_settings=="fine"){
-  imm_N_at_Len[,,,,1]<-exp(smooth_imm)
-  mat_N_at_Len[,,,,1]<-exp(smooth_mat)
+  imm_N_at_Len[,,,,1]<-array(0,dim = c(length(lat),length(lon),2,length(sizes)))
+  mat_N_at_Len[,,,,1]<-array(0,dim = c(length(lat),length(lon),2,length(sizes)))
 }
 
 if(size_class_settings=="rough"){
@@ -338,24 +344,41 @@ imm_N_at_Len[imm_N_at_Len<0]<-0
 mat_N_at_Len[mat_N_at_Len<0]<-0
 
 
+## Abundance
+load("4_full_MSE/data/Abundance_Recruitment_Assessment.Rdata") # Outputs provided by Mathieu from GMACS
+init_year = 37 # Time series: 1982-2022
+Ab_males = unlist(Snow_Out$Abundance$N_males[init_year,])
+Ab_males_mat = unlist(Snow_Out$Abundance$N_males_mature[init_year,])
+Ab_females = unlist(Snow_Out$Abundance$N_females[init_year,])
+Ab_females_mat = unlist(Snow_Out$Abundance$N_females_mature[init_year,])
+
 #==This makes up a random distribution for the population
 #==only used for testing
-fake_dist_data<-0
+fake_dist_data<-1
 if(fake_dist_data==1)
 {
   #==set dummy initial distribution--take this from the survey for real
   #==this is only for getting mechanics down
-  imm_N_at_Len[,,1,1,1]<-test_immat * 500000
-  imm_N_at_Len[,,2,1,1]<-test_immat * 500000
-  mat_N_at_Len[,,1,1,1]<-test_mat * 500000
-  mat_N_at_Len[,,2,1,1]<-test_mat * 500000
+  imm_N_at_Len[,,1,1,1]<-init_juv * (Ab_females[1] - Ab_females_mat[1])
+  imm_N_at_Len[,,2,1,1]<-init_juv * (Ab_males[1] - Ab_males_mat[1])
+  mat_N_at_Len[,,1,1,1]<-init_juv * Ab_females_mat[1]
+  mat_N_at_Len[,,2,1,1]<-init_juv * Ab_males_mat[1]
   
   for(x in 2:length(sizes))
   {
-    imm_N_at_Len[,,1,x,1]<-test_immat * 500000
-    imm_N_at_Len[,,2,x,1]<-test_immat * 500000
-    mat_N_at_Len[,,1,x,1]<-test_mat * 500000
-    mat_N_at_Len[,,2,x,1]<-test_mat * 500000
+    
+    if(sizes[x] < ad_size){
+      imm_N_at_Len[,,1,x,1]<-init_juv * (Ab_females[x] - Ab_females_mat[x])
+      imm_N_at_Len[,,2,x,1]<-init_juv * (Ab_males[x] - Ab_males_mat[x])
+      mat_N_at_Len[,,1,x,1]<-init_juv * Ab_females_mat[x]
+      mat_N_at_Len[,,2,x,1]<-init_juv * Ab_males_mat[x]
+    }else if(sizes[x] > 45){
+      imm_N_at_Len[,,1,x,1]<-init_adult * (Ab_females[x] - Ab_females_mat[x])
+      imm_N_at_Len[,,2,x,1]<-init_adult * (Ab_males[x] - Ab_males_mat[x])
+      mat_N_at_Len[,,1,x,1]<-init_adult * Ab_females_mat[x]
+      mat_N_at_Len[,,2,x,1]<-init_adult * Ab_males_mat[x]
+    }
+    
   }
   
 }
@@ -419,6 +442,22 @@ for(x in 1:length(proj_period))
 #==========================
 ## Growth
 #--------
+# Parameterize with GMACS
+growth_transition <- repfile$growth_matrix
+growth_param <- repfile$Growth_param  %>% 
+  dplyr::mutate(model = "")
+
+growth_param[1:6,] <- growth_param[1:6,] %>% 
+  dplyr::mutate(Parameter = c(paste("Male", c("alpha", "beta", "scale"), sep = "_"),
+                              paste("Female", c("alpha", "beta", "scale"), sep = "_")))  %>% 
+  dplyr::mutate(model = "Increment")
+
+growth_param[7:dim(growth_param)[1],] <- growth_param[7:dim(growth_param)[1],] %>% 
+  dplyr::mutate(Parameter = c(paste(rep(c("Male_SC", "female_SC"), each = length(repfile$mid_points)),
+                                    rep(1:length(repfile$mid_points), 2), sep="_")))  %>% 
+  dplyr::mutate(model = "molt prob")
+
+# Type of model
 growth_model <- "cody_model" # "max_model" "cody_model"
 # Cody's model --> non-spatial life-history parameters
 # Maxime's model --> spatially varying life-history parameters
@@ -470,6 +509,17 @@ if(size_class_settings == "rough") term_molt_prob<-c(0.01, 0.3,0.58,0.9)
 plot(term_molt_prob~sizes)
 
 
+## Recruitment
+#-------------
+recruit_female = unlist(Snow_Out$Recruitment$recruits[1,])
+meanlog_recruit_female = mean(log(recruit_female))
+sdlog_female = sd(log(recruit_female))
+
+recruit_male = unlist(Snow_Out$Recruitment$recruits[2,])
+meanlog_recruit_male = mean(log(recruit_male))
+sdlog_male = sd(log(recruit_male))
+
+
 ## fishery pars
 #--------------
 fish_50<-95
@@ -496,76 +546,103 @@ move_len_95<-70
 ## Movement matrices
 #-------------------
 # --> might need to make different matrices for mature and immature
-compute_movement_matrix = F
+compute_movement_matrix = T
 
 if(compute_movement_matrix){
   
   # Compute adjacency matrix
-  A_gg = dnearneigh(point_expand,d1=0.45,d2=0.65)
+  A_gg = dnearneigh(point_expand[,c("Var1","Var2")],d1=0.45,d2=0.65)
   A_gg_mat = nb2mat(A_gg)
   A_gg_mat[which(A_gg_mat > 0)] = 1
   # plot(A_gg_mat[1:100,1:100])
   
   ## Diffusion
+  #-----------
   # D * DeltaT / A
   # with D: diffusion coefficient, here btwn 0.1 and 1.1 km(^2?) per day (Cf. Olmos et al. SM)
   # DeltaT: time interval btwn time steps, 
   # A: area of grid cells
-  
-  par(mfrow = c(3,2))
+  # par(mfrow = c(3,2))
   D = 0.5
   DeltaT = (1/30) # convert day in month
   A = mean(cell_area)
   diffusion_coefficient = D * DeltaT / A
-  
   diffusion_coefficient = 2 ^ 2
-  
   diffusion_gg = A_gg_mat * diffusion_coefficient
-  # plot(diffusion_gg[1:100,1:100], breaks=20)
-  # hist(diffusion_gg)
   diag(diffusion_gg) = -1 * colSums(diffusion_gg)
+  
   # plot(diffusion_gg[1:100,1:100], breaks=20)
   # hist(diffusion_gg)
   
-  # Taxis
-  model_mov = RMexp(scale = 40,var = 1)
-  preference_g_mat = (as.matrix(RFsimulate(model_mov, lon, rev(lat), grid=TRUE))) # at the moment preference habitat is a simple RF --> should be fitted to data
-  preference_g_mat = preference_g_mat - min(preference_g_mat)
-  # plot(t(preference_g_mat), breaks=20)
-  preference_g = as.vector(t(preference_g_mat))
+  ## Taxis for juveniles
+  #---------------------
+  taxis_coef_juv = 10^5 # This value is set so that movement happen rapidly enough --> should be refined by some ecological considerations
+  preference_g_juv = (init_juv - mean(init_juv)) / sd(init_juv)
+  # plot(t(preference_g_juv), breaks=20)
+  preference_g_juv = as.vector(t(preference_g_juv))
   # # check
   # test = matrix(preference_g,nrow = 40,ncol = 40,byrow = T)
   # plot(test)
   
-  taxis_gg = A_gg_mat * outer(preference_g, preference_g, "-") * DeltaT / sqrt(A)
-  diag(taxis_gg) = -1 * colSums(taxis_gg)
+  taxis_gg_juv = A_gg_mat *  taxis_coef_juv * DeltaT / A * exp(outer(preference_g_juv, preference_g_juv, "-") * DeltaT / sqrt(A))
+  diag(taxis_gg_juv) = -1 * colSums(taxis_gg_juv)
   
   # Total
-  mrate_gg = diffusion_gg + taxis_gg
+  mrate_gg_juv = taxis_gg_juv # + diffusion_gg
   # plot(diffusion_gg[1:100,1:100],breaks=20)
-  if( any(mrate_gg-diag(diag(mrate_gg))<0) ) stop("`mrate_gg` must be a Metzler matrix. Consider changing parameterization")
+  if( any(mrate_gg_juv-diag(diag(mrate_gg_juv))<0) ) stop("`mrate_gg` must be a Metzler matrix. Consider changing parameterization")
+  mfraction_gg_juv = Matrix::expm(mrate_gg_juv)
+  # test = matrix(mfraction_gg_juv@x,nrow=mfraction_gg_juv@Dim[1],ncol=mfraction_gg_juv@Dim[2])
+  # plot(test[1:100,1:100])
+  stationary_g_juv = eigen(mfraction_gg_juv)$vectors[,1]
+  stationary_g_juv = stationary_g_juv / sum(stationary_g_juv)
+  test = matrix(stationary_g_juv,nrow=40,ncol=40,byrow = T)
+  plot(test)
+
+  ## Taxis for adults
+  #------------------
+  taxis_coef_ad = 10^5 # This value is set so that movement happen rapidly enough --> should be refined by some ecological considerations
+  preference_g_ad = (init_adult - mean(init_adult)) / sd(init_adult)
+  preference_g_ad = as.vector(t(preference_g_ad))
+  # # check
+  # test = matrix(preference_g,nrow = 40,ncol = 40,byrow = T)
+  # plot(test)
   
-  mfraction_gg = Matrix::expm(mrate_gg)
+  taxis_gg_ad = A_gg_mat *  taxis_coef_ad * DeltaT / A * exp(outer(preference_g_ad, preference_g_ad, "-") * DeltaT / sqrt(A))
+  diag(taxis_gg_ad) = -1 * colSums(taxis_gg_ad)
+  
+  # Total
+  mrate_gg_ad = taxis_gg_ad # + diffusion_gg
+  if( any(mrate_gg_ad-diag(diag(mrate_gg_ad))<0) ) stop("`mrate_gg` must be a Metzler matrix. Consider changing parameterization")
+  
+  mfraction_gg_ad = Matrix::expm(mrate_gg_ad)
   # test = matrix(mfraction_gg@x,nrow=mfraction_gg@Dim[1],ncol=mfraction_gg@Dim[2])
   # plot(test[1:100,1:100])
   
-  stationary_g = eigen(mfraction_gg)$vectors[,1]
-  stationary_g = stationary_g / sum(stationary_g)
-  # test = matrix(stationary_g,nrow=40,ncol=40,byrow = T)
+  stationary_g_ad = eigen(mfraction_gg_ad)$vectors[,1]
+  stationary_g_ad = stationary_g_ad / sum(stationary_g_ad)
+  # test = matrix(stationary_g_ad,nrow=40,ncol=40,byrow = T)
   # plot(test)
   
 }
 
 ## Fishery selectivity
 #---------------------
-fish_sel_50_f<-NA
-fish_sel_95_f<-NA
-fish_sel_50_m<-99
-fish_sel_95_m<-101
+# Parameterize with GMACS
+selec_curve = repfile$selectivity$Start_Y %>% 
+  filter(fleet == 1) %>% 
+  dplyr::select_at(vars(starts_with("SizeC_")))
 
-fish_sel<-rbind(1/(1+exp(-log(19)*(sizes-fish_sel_50_f)/(fish_sel_95_f-fish_sel_50_f))),
-                1/(1+exp(-log(19)*(sizes-fish_sel_50_m)/(fish_sel_95_m-fish_sel_50_m))))
-fish_sel[is.na(fish_sel)]<-0
+fish_sel = 
+
+# fish_sel_50_f<-NA
+# fish_sel_95_f<-NA
+# fish_sel_50_m<-50
+# fish_sel_95_m<-101
+# 
+# fish_sel<-rbind(1/(1+exp(-log(19)*(sizes-fish_sel_50_f)/(fish_sel_95_f-fish_sel_50_f))),
+#                 1/(1+exp(-log(19)*(sizes-fish_sel_50_m)/(fish_sel_95_m-fish_sel_50_m))))
+# fish_sel[is.na(fish_sel)]<-0
 
 #==this function sets a dispersal kernel for every cell
 #==sd is 'one grid square'  
@@ -632,7 +709,7 @@ cost_patch <- cost_travel * distance_map + cost_fish
 price <- 1.5
 
 fishers<-20
-quota<-rep(10000000,fishers)
+quota<-rep(1000,fishers)
 
 fishing_process="stochastic"
 # fishing_process="max_benefit_min_dist"
@@ -658,7 +735,7 @@ all_chosen_patch_full = list()
 list_info = data.frame(it = 0,
                        cost_travel = 0)
 
-max_quota_it = 500 # maximum iteration for filling the quota
+max_quota_it = 100 # maximum iteration for filling the quota
 use_harv = 1
 for(cost_travel in 1000){ # c(0,1000,1000*2)
   
@@ -830,8 +907,7 @@ for(cost_travel in 1000){ # c(0,1000,1000*2)
                 total_spatial_catch[chosen_patch[1],chosen_patch[2],sex,x,t] <- total_spatial_catch[chosen_patch[1],chosen_patch[2],sex,x,t] + 
                   temp_imm_N[chosen_patch[1],chosen_patch[2],sex,x]*fish_sel[sex,x]*use_harv + 
                   temp_mat_N[chosen_patch[1],chosen_patch[2],sex,x]*fish_sel[sex,x]*use_harv  
-                
-                
+
                 temp_catch<- temp_imm_N[chosen_patch[1],chosen_patch[2],sex,x]*fish_sel[sex,x]*wt_at_len[sex,x]*use_harv + 
                   temp_mat_N[chosen_patch[1],chosen_patch[2],sex,x]*fish_sel[sex,x]*wt_at_len[sex,x]*use_harv
                 
@@ -883,16 +959,36 @@ for(cost_travel in 1000){ # c(0,1000,1000*2)
         for(x in 1:length(sizes))
         {
           
-          # mov_imm_temp = temp_imm_N[,,sex,x]
-          # mov_mat_temp = temp_mat_N[,,sex,x]
-          # 
-          # mov_imm_v = mfraction_gg %*% as.vector(t(mov_imm_temp))
-          # mov_mat_v = mfraction_gg %*% as.vector(t(mov_imm_temp))
-          # 
-          # mov_imm_temp_2 = matrix(mov_imm_v, nrow = length(lat), ncol = length(lon),byrow = T)
-          # mov_mat_temp_2 = matrix(mov_mat_v, nrow = length(lat), ncol = length(lon),byrow = T)
-
+          if(sizes[x] < ad_size){
+            
+            mov_imm_temp = temp_imm_N[,,sex,x]
+            mov_mat_temp = temp_mat_N[,,sex,x]
+            
+            mov_imm_v = mfraction_gg_juv %*% as.vector(t(mov_imm_temp))
+            mov_mat_v = mfraction_gg_juv %*% as.vector(t(mov_imm_temp))
+            
+            mov_imm_temp_2 = matrix(mov_imm_v, nrow = length(lat), ncol = length(lon),byrow = T)
+            mov_mat_temp_2 = matrix(mov_mat_v, nrow = length(lat), ncol = length(lon),byrow = T)
+            
+          }else{
+            
+            mov_imm_temp = temp_imm_N[,,sex,x]
+            mov_mat_temp = temp_mat_N[,,sex,x]
+            
+            mov_imm_v = mfraction_gg_ad %*% as.vector(t(mov_imm_temp))
+            mov_mat_v = mfraction_gg_ad %*% as.vector(t(mov_imm_temp))
+            
+            mov_imm_temp_2 = matrix(mov_imm_v, nrow = length(lat), ncol = length(lon),byrow = T)
+            mov_mat_temp_2 = matrix(mov_mat_v, nrow = length(lat), ncol = length(lon),byrow = T)
+            
+          }
+          
+          temp_imm_N[,,sex,x] = mov_imm_temp_2
+          temp_mat_N[,,sex,x] = mov_mat_temp_2
+          
+          
           # ## Check that movement happens
+          # x11()
           # par(mfrow = c(3,2))
           # 
           # mov_imm_temp = temp_imm_N[,,sex,x]
@@ -902,19 +998,25 @@ for(cost_travel in 1000){ # c(0,1000,1000*2)
           # 
           # for(t in 1:5){
           # 
-          #   mov_imm_v =  mfraction_gg %*% as.vector(t(mov_imm_temp)) # mrate_gg %*%
-          #   mov_mat_v = mfraction_gg %*% as.vector(t(mov_mat_temp))  # mrate_gg %*%
+          #   mov_imm_v = mfraction_gg_ad %*% as.vector(t(mov_imm_temp)) # mrate_gg %*%
+          #   mov_mat_v = mfraction_gg_ad %*% as.vector(t(mov_mat_temp))  # mrate_gg %*%
           # 
           #   mov_imm_temp_2 = matrix(mov_imm_v, nrow = length(lat), ncol = length(lon),byrow = T)
           #   mov_mat_temp_2 = matrix(mov_mat_v, nrow = length(lat), ncol = length(lon),byrow = T)
           # 
-          #   # print(which((mov_imm_temp != mov_mat_temp_2)))
+          #   print(which((mov_imm_temp != mov_mat_temp_2)))
           # 
           #   mov_imm_temp = mov_imm_temp_2
           #   mov_mat_temp = mov_mat_temp_2
-          #   
+          # 
           #   plot(mov_imm_temp,main=paste0("t = ",t),asp = 1)
-          #   
+          # 
+          # }
+          # 
+          ## Or
+          # for(t in 1:(12*5)){
+          #   x11()
+          #   plot(mat_N_at_Len[,,2,5,t],asp = 1)
           # }
 
         }
@@ -1100,15 +1202,20 @@ for(cost_travel in 1000){ # c(0,1000,1000*2)
       #==this implants the original recruitment with some error
       #==ultimately we need an algorithm to determine location and intensity of recruitment
       #==teleconnections postdoc will hopefully help with this
-      tmp_rec_1<- matrix(rnorm(length(imm_N_at_Len[,,1,1,1]),1,1),ncol=ncol(imm_N_at_Len[,,1,1,1]),nrow=nrow(imm_N_at_Len[,,1,1,1]))
+      aggreg_rec_1 = rlnorm(n = 1, mean = meanlog_recruit_female, sdlog = sdlog_female)
+      aggreg_rec_2 = rlnorm(n = 1, mean = meanlog_recruit_male, sdlog = sdlog_male)
+      
+      tmp_rec_1 <- init_juv * aggreg_rec_1
+      # matrix(rep(aggreg_rec_1),ncol=ncol(imm_N_at_Len[,,1,1,1]),nrow=nrow(imm_N_at_Len[,,1,1,1]))
       tmp_rec_1[tmp_rec_1<0]<-0
-      tmp_rec_2<- matrix(rnorm(length(imm_N_at_Len[,,2,1,1]),1,1),ncol=ncol(imm_N_at_Len[,,1,1,1]),nrow=nrow(imm_N_at_Len[,,2,1,1]))
-      tmp_rec_2[tmp_rec_2<0]<-0  
+      tmp_rec_2 <- init_juv * aggreg_rec_2
+      # matrix(rnorm(length(imm_N_at_Len[,,2,1,1]),1,1),ncol=ncol(imm_N_at_Len[,,1,1,1]),nrow=nrow(imm_N_at_Len[,,2,1,1]))
+      tmp_rec_2[tmp_rec_2<0]<-0
       
       for(r in 1:rec_sizes)
       {
-        temp_imm_N[,,1,r] <- temp_imm_N[,,1,r] + imm_N_at_Len[,,1,r,1]*tmp_rec_1
-        temp_imm_N[,,2,r] <- temp_imm_N[,,2,r] + imm_N_at_Len[,,2,r,1]*tmp_rec_2
+        temp_imm_N[,,1,r] <- temp_imm_N[,,1,r] + imm_N_at_Len[,,1,r,1]*tmp_rec_1*prop_rec[r]
+        temp_imm_N[,,2,r] <- temp_imm_N[,,2,r] + imm_N_at_Len[,,2,r,1]*tmp_rec_2*prop_rec[r]
       }
     }
     
