@@ -580,7 +580,7 @@ if(compute_movement_matrix){
   
   ## Taxis for juveniles
   #---------------------
-  taxis_coef_juv = 10^3 # This value is set so that movement happen rapidly enough --> should be refined by some ecological considerations
+  taxis_coef_juv = 10^4 # This value is set so that movement happen rapidly enough --> should be refined by some ecological considerations
   preference_g_juv = (init_juv - mean(init_juv)) / sd(init_juv)
   # plot(t(preference_g_juv), breaks=20)
   preference_g_juv = as.vector(t(preference_g_juv))
@@ -605,7 +605,7 @@ if(compute_movement_matrix){
 
   ## Taxis for adults
   #------------------
-  taxis_coef_ad = 10^3 # This value is set so that movement happen rapidly enough --> should be refined by some ecological considerations
+  taxis_coef_ad = 10^4 # This value is set so that movement happen rapidly enough --> should be refined by some ecological considerations
   preference_g_ad = (init_adult - mean(init_adult)) / sd(init_adult)
   preference_g_ad = as.vector(t(preference_g_ad))
   # # check
@@ -1017,9 +1017,16 @@ for(cost_travel in 1000){ # c(0,1000,1000*2)
           # }
           # 
           ## Or
-          # for(t in 1:(12*5)){
-          #   x11()
-          #   plot(mat_N_at_Len[,,2,5,t],asp = 1)
+          # 
+          # land_mask_na = land_mask
+          # land_mask_na[which(land_mask_na == 0)] = NA
+          # for(t in 1:(12*3)){
+          #   if(t %in% c(1,13,25)){
+          #     x11()
+          #     par(mfrow = c(4,3))
+          #   }
+          # 
+          #   plot(mat_N_at_Len[,,2,7,t] * land_mask_na,main=paste0(t),asp = 1)
           # }
 
         }
