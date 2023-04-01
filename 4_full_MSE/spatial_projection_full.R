@@ -14,6 +14,7 @@ library(gdistance)
 library(FishStatsUtils)
 library(maps)
 library(maptools)
+library(plot.matrix)
 library(raster)
 library(rnaturalearth)
 library(reshape2)
@@ -580,7 +581,7 @@ if(compute_movement_matrix){
   
   ## Taxis for juveniles
   #---------------------
-  taxis_coef_juv = 10^4 # This value is set so that movement happen rapidly enough --> should be refined by some ecological considerations
+  taxis_coef_juv = 10^2 # This value is set so that movement happen rapidly enough --> should be refined by some ecological considerations
   preference_g_juv = (init_juv - mean(init_juv)) / sd(init_juv)
   # plot(t(preference_g_juv), breaks=20)
   preference_g_juv = as.vector(t(preference_g_juv))
@@ -600,12 +601,12 @@ if(compute_movement_matrix){
   # plot(test[1:100,1:100])
   stationary_g_juv = eigen(mfraction_gg_juv)$vectors[,1]
   stationary_g_juv = stationary_g_juv / sum(stationary_g_juv)
-  test = matrix(stationary_g_juv,nrow=40,ncol=40,byrow = T)
-  plot(test)
+  # test = matrix(stationary_g_juv,nrow=40,ncol=40,byrow = T)
+  # x11();plot(test)
 
   ## Taxis for adults
   #------------------
-  taxis_coef_ad = 10^4 # This value is set so that movement happen rapidly enough --> should be refined by some ecological considerations
+  taxis_coef_ad = 10^2 # This value is set so that movement happen rapidly enough --> should be refined by some ecological considerations
   preference_g_ad = (init_adult - mean(init_adult)) / sd(init_adult)
   preference_g_ad = as.vector(t(preference_g_ad))
   # # check
@@ -626,7 +627,7 @@ if(compute_movement_matrix){
   stationary_g_ad = eigen(mfraction_gg_ad)$vectors[,1]
   stationary_g_ad = stationary_g_ad / sum(stationary_g_ad)
   # test = matrix(stationary_g_ad,nrow=40,ncol=40,byrow = T)
-  # plot(test)
+  # x11();plot(test)
   
 }
 
@@ -699,7 +700,7 @@ for(x in 1:length(lon))
   }  
 # filled.contour(x=lon,y=rev(lat),g(distance_map*land_mask),plot.axes=c(map(add=TRUE,fill=T,col='grey'),
 #                                                                       points(y=port_lat,x=port_lon,pch=16,col='red')))
-#write.csv(distance_map,'dist.csv')
+# write.csv(distance_map,'dist.csv')
 
 
 #================================================
@@ -947,103 +948,16 @@ for(cost_travel in 1000){ # c(0,1000,1000*2)
       
     }
     
-    #==========================
-    #==MOVEMENT OCCURS
-    #==========================  
-    #==movement input as a .csv?
-    #==movement constant?
-    #==movement follows gradient?
-    
-    if(move_time[t]==1)
-    {
-      #==two options: gaussian and temperature mediated
-      #==gaussian
-      #==create disperal kernel for each space
-      for(sex in 1:2)
-        for(x in 1:length(sizes))
-        {
-          
-          if(sizes[x] < ad_size){
-            
-            mov_imm_temp = temp_imm_N[,,sex,x]
-            mov_mat_temp = temp_mat_N[,,sex,x]
-            
-            mov_imm_v = mfraction_gg_juv %*% as.vector(t(mov_imm_temp))
-            mov_mat_v = mfraction_gg_juv %*% as.vector(t(mov_imm_temp))
-            
-            mov_imm_temp_2 = matrix(mov_imm_v, nrow = length(lat), ncol = length(lon),byrow = T)
-            mov_mat_temp_2 = matrix(mov_mat_v, nrow = length(lat), ncol = length(lon),byrow = T)
-            
-          }else{
-            
-            mov_imm_temp = temp_imm_N[,,sex,x]
-            mov_mat_temp = temp_mat_N[,,sex,x]
-            
-            mov_imm_v = mfraction_gg_ad %*% as.vector(t(mov_imm_temp))
-            mov_mat_v = mfraction_gg_ad %*% as.vector(t(mov_imm_temp))
-            
-            mov_imm_temp_2 = matrix(mov_imm_v, nrow = length(lat), ncol = length(lon),byrow = T)
-            mov_mat_temp_2 = matrix(mov_mat_v, nrow = length(lat), ncol = length(lon),byrow = T)
-            
-          }
-          
-          temp_imm_N[,,sex,x] = mov_imm_temp_2
-          temp_mat_N[,,sex,x] = mov_mat_temp_2
-
-          # ## Check that movement happens
-          # x11()
-          # par(mfrow = c(3,2))
-          # 
-          # mov_imm_temp = temp_imm_N[,,sex,x]
-          # mov_mat_temp = temp_mat_N[,,sex,x]
-          # 
-          # plot(mov_imm_temp,main=paste0("t = 0"),asp = 1)
-          # 
-          # for(t in 1:5){
-          # 
-          #   mov_imm_v = mfraction_gg_ad %*% as.vector(t(mov_imm_temp)) # mrate_gg %*%
-          #   mov_mat_v = mfraction_gg_ad %*% as.vector(t(mov_mat_temp))  # mrate_gg %*%
-          # 
-          #   mov_imm_temp_2 = matrix(mov_imm_v, nrow = length(lat), ncol = length(lon),byrow = T)
-          #   mov_mat_temp_2 = matrix(mov_mat_v, nrow = length(lat), ncol = length(lon),byrow = T)
-          # 
-          #   print(which((mov_imm_temp != mov_mat_temp_2)))
-          # 
-          #   mov_imm_temp = mov_imm_temp_2
-          #   mov_mat_temp = mov_mat_temp_2
-          # 
-          #   plot(mov_imm_temp,main=paste0("t = ",t),asp = 1)
-          # 
-          # }
-          # 
-          ## Or
-          # 
-          # land_mask_na = land_mask
-          # land_mask_na[which(land_mask_na == 0)] = NA
-          # for(t in 1:(12*3)){
-          #   if(t %in% c(1,13,25)){
-          #     x11()
-          #     par(mfrow = c(4,3))
-          #   }
-          # 
-          #   plot(mat_N_at_Len[,,2,7,t] * land_mask_na,main=paste0(t),asp = 1)
-          # }
-
-        }
-      
-    }
     
     #==========================
     #==GROWTH OCCURS
     #==========================
     
-    ########################################################################################################################
-    ######################################## This is where Maxime's work plug-in ###########################################
-    ########################################################################################################################
-    
     if( molt_time[1,t]==1 | molt_time[2,t]==1 )
     {
       
+      ## Maxime's growth model init
+      #----------------------------
       if(growth_model == "max_model"){
         
         if(print_messages) print("growth Max")
@@ -1053,10 +967,13 @@ for(cost_travel in 1000){ # c(0,1000,1000*2)
       
       
       # bot_temp_dat<-read.csv(paste("temp_data/bot_temp_",time,".csv",sep=""),header=T)
-      for(x in 1:nrow(imm_N_at_Len[,,,,t]))
+      for(x in 1:nrow(imm_N_at_Len[,,,,t])){
         for(y in 1:ncol(imm_N_at_Len[,,,,t]))
         {
           
+          
+          ## Cody's growth model
+          #---------------------
           if(growth_model == "cody_model"){
             
             if(land_mask[x,y]!=0)
@@ -1137,8 +1054,9 @@ for(cost_travel in 1000){ # c(0,1000,1000*2)
             
           }
           
-          #==========================================================================================================
           
+          ## Maximes' growth model
+          #-----------------------
           if(growth_model == "max_model"){
             
             # bot_temp_dat<-read.csv(paste("temp_data/bot_temp_",time,".csv",sep=""),header=T)
@@ -1156,6 +1074,7 @@ for(cost_travel in 1000){ # c(0,1000,1000*2)
                     temp_mat_N[x,y,1,]<-temp_mat_N[x,y,1,] + (1-term_molt_prob)*tmp_molt
                     
                   }
+                  
                   if(molt_time[2,t]==1)
                   {
                     tmp_molt          <-temp_imm_N[x,y,2,]%*%size_transition_mat_m_imm[t,x,y,,] ##### Is the indexing right ??????
@@ -1164,7 +1083,7 @@ for(cost_travel in 1000){ # c(0,1000,1000*2)
                   }
                   
                   if(terminal_molt==0)
-                  { 
+                  {
                     
                     if(!is.na(match(molt_time[1,t],t)) ) 
                       temp_mat_N[x,y,1,]<-temp_mat_N[x,y,1,]%*%size_transition_mat_f_mat[t,x,y,,] ##### Is the indexing right ??????
@@ -1179,6 +1098,134 @@ for(cost_travel in 1000){ # c(0,1000,1000*2)
           }
           
         }
+        
+      }
+      
+      ## Ontogenic movement
+      #--------------------
+      # that's rough, but cannot make better at the moment
+      # the best would be to make some kind of transition 
+      # movement from adult to juvenile with Jim's model 
+      
+      which_ad_size = which(sizes < ad_size)
+      which_ad_size = which_ad_size[length(which_ad_size)]+1
+      last_size_mig = which(size_transition_mat_m_imm[which_ad_size,] < 0.001)[which_ad_size]
+      
+      for(x in which_ad_size:last_size_mig){
+        
+        ontog_mig_N_imm_female = temp_imm_N[,,1,x]
+        ontog_mig_N_imm_male = temp_imm_N[,,2,x]
+        ontog_mig_N_mat_female = temp_mat_N[,,1,x]
+        ontog_mig_N_mat_male = temp_mat_N[,,2,x]
+        
+        Ab_ontog_mig_N_imm_female = sum(ontog_mig_N_imm_female)
+        Ab_ontog_mig_N_imm_male = sum(ontog_mig_N_imm_male)
+        Ab_ontog_mig_N_mat_female = sum(ontog_mig_N_mat_female)
+        Ab_ontog_mig_N_mat_male = sum(ontog_mig_N_mat_male)
+        
+        ontog_mig_N_imm_female = Ab_ontog_mig_N_imm_female * init_adult
+        ontog_mig_N_imm_male = Ab_ontog_mig_N_imm_male * init_adult
+        ontog_mig_N_mat_female = Ab_ontog_mig_N_mat_female * init_adult
+        ontog_mig_N_mat_male = Ab_ontog_mig_N_mat_male * init_adult
+        
+        temp_imm_N[,,1,x] = ontog_mig_N_imm_female
+        temp_imm_N[,,2,x] = ontog_mig_N_imm_male
+        temp_mat_N[,,1,x] = ontog_mig_N_mat_female
+        temp_mat_N[,,2,x] = ontog_mig_N_mat_male
+        
+      }
+      
+    }
+    
+    
+    #==========================
+    #==MOVEMENT OCCURS
+    #==========================  
+    #==movement input as a .csv?
+    #==movement constant?
+    #==movement follows gradient?
+    
+    if(move_time[t]==1)
+    {
+      #==two options: gaussian and temperature mediated
+      #==gaussian
+      #==create disperal kernel for each space
+      for(sex in 1:2)
+        for(x in 1:length(sizes))
+        {
+          
+          if(sizes[x] < ad_size){
+            
+            mov_imm_temp = temp_imm_N[,,sex,x]
+            mov_mat_temp = temp_mat_N[,,sex,x]
+            
+            mov_imm_v = mfraction_gg_juv %*% as.vector(t(mov_imm_temp))
+            mov_mat_v = mfraction_gg_juv %*% as.vector(t(mov_imm_temp))
+            
+            mov_imm_temp_2 = matrix(mov_imm_v, nrow = length(lat), ncol = length(lon),byrow = T)
+            mov_mat_temp_2 = matrix(mov_mat_v, nrow = length(lat), ncol = length(lon),byrow = T)
+            
+          }else{
+            
+            mov_imm_temp = temp_imm_N[,,sex,x]
+            mov_mat_temp = temp_mat_N[,,sex,x]
+            
+            mov_imm_v = mfraction_gg_ad %*% as.vector(t(mov_imm_temp))
+            mov_mat_v = mfraction_gg_ad %*% as.vector(t(mov_imm_temp))
+            
+            mov_imm_temp_2 = matrix(mov_imm_v, nrow = length(lat), ncol = length(lon),byrow = T)
+            mov_mat_temp_2 = matrix(mov_mat_v, nrow = length(lat), ncol = length(lon),byrow = T)
+            
+          }
+          
+          temp_imm_N[,,sex,x] = mov_imm_temp_2
+          temp_mat_N[,,sex,x] = mov_mat_temp_2
+          
+          # ## Check that movement happens
+          # x11()
+          # par(mfrow = c(4,4))
+          # 
+          # mov_imm_temp = temp_imm_N[,,sex,x]
+          # mov_mat_temp = temp_mat_N[,,sex,x]
+          # 
+          # plot(mov_imm_temp,main=paste0("t = 0"),asp = 1)
+          # 
+          # for(t in 1:15){
+          # 
+          #   mov_imm_v = mfraction_gg_ad %*% as.vector(t(mov_imm_temp)) # mrate_gg %*%
+          #   mov_mat_v = mfraction_gg_ad %*% as.vector(t(mov_mat_temp))  # mrate_gg %*%
+          # 
+          #   mov_imm_temp_2 = matrix(mov_imm_v, nrow = length(lat), ncol = length(lon),byrow = T)
+          #   mov_mat_temp_2 = matrix(mov_mat_v, nrow = length(lat), ncol = length(lon),byrow = T)
+          # 
+          #   # print(which((mov_imm_temp != mov_mat_temp_2)))
+          # 
+          #   mov_imm_temp = mov_imm_temp_2
+          #   mov_mat_temp = mov_mat_temp_2
+          # 
+          #   plot(mov_mat_temp,main=paste0("t = ",t),asp = 1)
+          # 
+          # }
+          # 
+          # # and compare with
+          # test = matrix(stationary_g_ad,nrow=40,ncol=40,byrow = T)
+          # plot(test)
+          # 
+          # # 
+          # ## Or
+          # land_mask_na = land_mask
+          # land_mask_na[which(land_mask_na == 0)] = NA
+          # for(t in 1:(12*3)){
+          #   if(t %in% c(1,13,25)){
+          #     x11()
+          #     par(mfrow = c(4,3))
+          #   }
+          #   
+          #   plot(mat_N_at_Len[,,2,5,t] * land_mask_na,main=paste0(t),asp = 1)
+          # }
+          
+        }
+      
     }
     
     #==========================
@@ -1405,6 +1452,12 @@ tot_profit<-apply(profit_by_fisher,c(3),sum,na.rm=T)
 
 tot_imm<-apply(imm_N_at_Len,c(5),sum,na.rm=T)
 tot_mat<-apply(mat_N_at_Len,c(5),sum,na.rm=T)
+
+x11()
+par(mfrow=c(1,2))
+plot(init_juv)
+plot(init_adult)
+
 
 x11()
 par(mfrow=c(4,1),mar=c(.1,.1,.1,.1),oma=c(4,.1,1,1))
