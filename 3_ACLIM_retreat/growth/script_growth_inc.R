@@ -15,5 +15,3 @@ growth_trans  <- function(sizes,m_last , m_first, L_first, L_last, binsize,beta_
   growmat <- growmat/rowSums(growmat, na.rm = T)
   return(growmat)
 }
-
-

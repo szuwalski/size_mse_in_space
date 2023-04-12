@@ -74,8 +74,8 @@ EBS_sp = as_Spatial(EBS_sf)
 EBS_mask = is.na(over(pts, EBS_sp)$Include)
 
 # ## Check
-# plot(wrld_simpl,xlim = c(min(lon), max(lon)), ylim = c(min(lat),max(lat)))
-# points(pts, col=1+land, pch=16)
+plot(wrld_simpl,xlim = c(min(lon), max(lon)), ylim = c(min(lat),max(lat)))
+points(pts, col=1+land, pch=16)
 
 ## Climate scenarios 
 #-------------------
@@ -313,6 +313,14 @@ init_juv = init_juv / sum(init_juv)
 
 # cowplot::plot_grid(Juv_plot,Mat_plot)
 
+land_mask_na = land_mask
+land_mask_na[which(land_mask == 0)] = NA
+par(mfrow=c(1,2))
+plot(init_juv * land_mask_na, main = "", asp = 1)
+plot(init_adult * land_mask_na, main = "", asp = 1)
+
+
+
 if(size_class_settings=="fine"){
   imm_N_at_Len[,,,,1]<-array(0,dim = c(length(lat),length(lon),2,length(sizes)))
   mat_N_at_Len[,,,,1]<-array(0,dim = c(length(lat),length(lon),2,length(sizes)))
@@ -445,7 +453,7 @@ for(x in 1:length(proj_period))
 #--------
 # Parameterize with GMACS
 growth_transition <- repfile$growth_matrix
-growth_param <- repfile$Growth_param  %>% 
+growth_param <- repfile$Growth_param %>% 
   dplyr::mutate(model = "")
 
 growth_param[1:6,] <- growth_param[1:6,] %>% 
@@ -459,7 +467,7 @@ growth_param[7:dim(growth_param)[1],] <- growth_param[7:dim(growth_param)[1],] %
   dplyr::mutate(model = "molt prob")
 
 # Type of model
-growth_model <- "cody_model" # "max_model" "cody_model"
+growth_model <- "max_model" # "max_model" "cody_model"
 # Cody's model --> non-spatial life-history parameters
 # Maxime's model --> spatially varying life-history parameters
 
@@ -467,24 +475,31 @@ growth_param_est = growth_param[1:6,] %>%
   dplyr::select(Estimate) %>% 
   unlist
 
-if(growth_model == "cody_model"){
-  
-  #==Cody's growth parameterization for generation of non spatially varying growth parameters
-  alpha_grow_f_imm<-4 # growth_param_est[4]
-  alpha_grow_m_imm<-7 # growth_param_est[1]
-  beta_grow_f_imm<-1.05 # growth_param_est[5]
-  beta_grow_m_imm<-1.1 # growth_param_est[2]
-  
-  alpha_grow_f_mat<-4 # growth_param_est[4]
-  alpha_grow_m_mat<-7 # growth_param_est[1]
-  beta_grow_f_mat<-1.05 # growth_param_est[5]
-  beta_grow_m_mat<-1.1 # growth_param_est[2]
-  
-  growth_sd_imm<-c(5,4) # Where to find better values?
-  growth_sd_mat<-c(5,4)
+#==Cody's growth parameterization for generation of non spatially varying growth parameters
+#==GMACS outputs
+alpha_grow_f_imm <- growth_param_est[4]
+alpha_grow_m_imm <- growth_param_est[1]
+beta_grow_f_imm <- - growth_param_est[5]
+beta_grow_m_imm <- - growth_param_est[2]
 
-}
+alpha_grow_f_mat <- growth_param_est[4]
+alpha_grow_m_mat <- growth_param_est[1]
+beta_grow_f_mat <- - growth_param_est[5]
+beta_grow_m_mat <- - growth_param_est[2]
 
+scale_f_imm = 1 # growth_param_est[6]
+scale_f_mat = 1 # growth_param_est[6]
+scale_m_imm = 1 # growth_param_est[3]
+scale_m_mat = 1 # growth_param_est[3]
+
+growth_sd_imm<-c(5,4) # Where to find better values?
+growth_sd_mat<-c(5,4)
+
+#==plug temp into growth curve
+f_postmolt_imm<-sizes + (alpha_grow_f_imm + beta_grow_f_imm*sizes)/scale_f_imm
+m_postmolt_imm<-sizes + (alpha_grow_m_imm + beta_grow_m_imm*sizes)/scale_m_imm
+f_postmolt_mat<-sizes + (alpha_grow_f_mat + beta_grow_f_mat*sizes)/scale_f_mat
+m_postmolt_mat<-sizes + (alpha_grow_m_mat + beta_grow_m_mat*sizes)/scale_m_mat
 
 if(growth_model == "max_model"){
   
@@ -609,7 +624,7 @@ if(compute_movement_matrix){
   taxis_coef_ad = 10^2 # This value is set so that movement happen rapidly enough --> should be refined by some ecological considerations
   preference_g_ad = (init_adult - mean(init_adult)) / sd(init_adult)
   preference_g_ad = as.vector(t(preference_g_ad))
-  # # check
+  # # Check
   # test = matrix(preference_g,nrow = 40,ncol = 40,byrow = T)
   # plot(test)
   
@@ -742,6 +757,8 @@ list_info = data.frame(it = 0,
 
 max_quota_it = 100 # maximum iteration for filling the quota
 use_harv = 1
+
+
 for(cost_travel in 1000){ # c(0,1000,1000*2)
   
   total_spatial_catch<-array(0,dim=c(length(lat),length(lon),sexN,length(sizes),length(proj_period)))
@@ -788,8 +805,6 @@ for(cost_travel in 1000){ # c(0,1000,1000*2)
             temp_catch[,,x]<-temp_imm_N[,,sex,x]*fish_sel[sex,x]*wt_at_len[sex,x] + 
               temp_mat_N[,,sex,x]*fish_sel[sex,x]*wt_at_len[sex,x]
           }
-        
-        
         
         ## Choose fishing location
         catch_patch<-apply(temp_catch,c(1,2),sum)
@@ -960,7 +975,7 @@ for(cost_travel in 1000){ # c(0,1000,1000*2)
       #----------------------------
       if(growth_model == "max_model"){
         
-        if(print_messages) print("growth Max")
+        print("growth Max")
         source("4_full_MSE/LHP/growth_t.R")
         
       }
@@ -971,18 +986,12 @@ for(cost_travel in 1000){ # c(0,1000,1000*2)
         for(y in 1:ncol(imm_N_at_Len[,,,,t]))
         {
           
-          
           ## Cody's growth model
           #---------------------
           if(growth_model == "cody_model"){
             
             if(land_mask[x,y]!=0)
             {
-              #==plug temp into growth curve
-              f_postmolt_imm<-alpha_grow_f_imm + beta_grow_f_imm*sizes
-              m_postmolt_imm<-alpha_grow_m_imm + beta_grow_m_imm*sizes
-              f_postmolt_mat<-alpha_grow_f_mat + beta_grow_f_mat*sizes
-              m_postmolt_mat<-alpha_grow_m_mat + beta_grow_m_mat*sizes
               
               #======================================
               #==make size transition matrix immature
@@ -1059,41 +1068,36 @@ for(cost_travel in 1000){ # c(0,1000,1000*2)
           #-----------------------
           if(growth_model == "max_model"){
             
-            # bot_temp_dat<-read.csv(paste("temp_data/bot_temp_",time,".csv",sep=""),header=T)
-            for(x in 1:nrow(imm_N_at_Len[,,,,t]))
-              for(y in 1:ncol(imm_N_at_Len[,,,,t]))
+            if(land_mask[x,y]!=0)
+            {
+              
+              #==immature crab molt, some mature, some remain immature
+              if(molt_time[1,t]==1)
               {
-                if(land_mask[x,y]!=0)
-                {
-                  
-                  #==immature crab molt, some mature, some remain immature
-                  if(molt_time[1,t]==1)
-                  {
-                    tmp_molt          <-temp_imm_N[x,y,1,]%*%size_transition_mat_f_imm[t,x,y,,] ##### Is the indexing right ??????
-                    temp_imm_N[x,y,1,]<-tmp_molt*term_molt_prob
-                    temp_mat_N[x,y,1,]<-temp_mat_N[x,y,1,] + (1-term_molt_prob)*tmp_molt
-                    
-                  }
-                  
-                  if(molt_time[2,t]==1)
-                  {
-                    tmp_molt          <-temp_imm_N[x,y,2,]%*%size_transition_mat_m_imm[t,x,y,,] ##### Is the indexing right ??????
-                    temp_imm_N[x,y,2,]<-tmp_molt*term_molt_prob
-                    temp_mat_N[x,y,2,]<-temp_mat_N[x,y,2,] + (1-term_molt_prob)*tmp_molt
-                  }
-                  
-                  if(terminal_molt==0)
-                  {
-                    
-                    if(!is.na(match(molt_time[1,t],t)) ) 
-                      temp_mat_N[x,y,1,]<-temp_mat_N[x,y,1,]%*%size_transition_mat_f_mat[t,x,y,,] ##### Is the indexing right ??????
-                    if(!is.na(match(molt_time[2,t],t)))
-                      temp_mat_N[x,y,2,]<-temp_mat_N[x,y,2,]%*%size_transition_mat_m_mat[t,x,y,,] ##### Is the indexing right ??????
-                  }
-                  
-                }
+                
+                tmp_molt          <-temp_imm_N[x,y,1,]%*%size_transition_mat_f_imm[t,x,y,,] ##### Is the indexing right ??????
+                temp_imm_N[x,y,1,]<-tmp_molt*term_molt_prob
+                temp_mat_N[x,y,1,]<-temp_mat_N[x,y,1,] + (1-term_molt_prob)*tmp_molt
                 
               }
+              
+              if(molt_time[2,t]==1)
+              {
+                tmp_molt          <-temp_imm_N[x,y,2,]%*%size_transition_mat_m_imm[t,x,y,,] ##### Is the indexing right ??????
+                temp_imm_N[x,y,2,]<-tmp_molt*term_molt_prob
+                temp_mat_N[x,y,2,]<-temp_mat_N[x,y,2,] + (1-term_molt_prob)*tmp_molt
+              }
+              
+              if(terminal_molt==0)
+              {
+                
+                if(!is.na(match(molt_time[1,t],t)))
+                  temp_mat_N[x,y,1,]<-temp_mat_N[x,y,1,]%*%size_transition_mat_f_mat[t,x,y,,] ##### Is the indexing right ??????
+                if(!is.na(match(molt_time[2,t],t)))
+                  temp_mat_N[x,y,2,]<-temp_mat_N[x,y,2,]%*%size_transition_mat_m_mat[t,x,y,,] ##### Is the indexing right ??????
+              }
+              
+            }
             
           }
           
@@ -1108,15 +1112,44 @@ for(cost_travel in 1000){ # c(0,1000,1000*2)
       # movement from adult to juvenile with Jim's model 
       
       which_ad_size = which(sizes < ad_size)
-      which_ad_size = which_ad_size[length(which_ad_size)]+1
-      last_size_mig = which(size_transition_mat_m_imm[which_ad_size,] < 0.001)[which_ad_size]
+      which_ad_size = which_ad_size[length(which_ad_size)] + 1
       
-      for(x in which_ad_size:last_size_mig){
-        
-        ontog_mig_N_imm_female = temp_imm_N[,,1,x]
-        ontog_mig_N_imm_male = temp_imm_N[,,2,x]
-        ontog_mig_N_mat_female = temp_mat_N[,,1,x]
-        ontog_mig_N_mat_male = temp_mat_N[,,2,x]
+      if(length(dim(size_transition_mat_m_imm)) == 2){
+        last_size_mig = which(size_transition_mat_m_imm[which_ad_size,] < 0.001)[which_ad_size]
+      }else if(length(dim(size_transition_mat_m_imm)) == 5){
+        last_size_mig2 = c()
+        for(x in 1:length(lat)){
+          for(y in 1:length(lon)){
+            if(init_juv[x,y] > 0){
+              last_size_mig2 = c(last_size_mig2,which(size_transition_mat_m_imm[t,x,y,which_ad_size,] < 0.001)[which_ad_size])
+            }
+          }
+        }
+        last_size_mig = max(last_size_mig2)
+      }
+      
+      for(s in which_ad_size:last_size_mig){
+        ontog_mig_N_imm_female = c()
+        ontog_mig_N_imm_male = c()
+        ontog_mig_N_mat_female = c()
+        ontog_mig_N_mat_male = c()
+        for(x in length(lon)){
+          for(y in length(lat)){
+            if(init_juv[x,y] > 0){
+              
+              ontog_mig_N_imm_female = ontog_mig_N_imm_female + temp_imm_N[x,y,1,s]
+              ontog_mig_N_imm_male = ontog_mig_N_imm_male + temp_imm_N[x,y,2,s]
+              ontog_mig_N_mat_female = ontog_mig_N_mat_female + temp_mat_N[x,y,1,s]
+              ontog_mig_N_mat_male = ontog_mig_N_mat_male + temp_mat_N[x,y,2,s]
+              
+              temp_imm_N[x,y,1,s] = 0
+              temp_imm_N[x,y,2,s] = 0
+              temp_mat_N[x,y,1,s] = 0
+              temp_mat_N[x,y,2,s] = 0
+              
+            }
+          }
+        }
         
         Ab_ontog_mig_N_imm_female = sum(ontog_mig_N_imm_female)
         Ab_ontog_mig_N_imm_male = sum(ontog_mig_N_imm_male)
@@ -1128,10 +1161,10 @@ for(cost_travel in 1000){ # c(0,1000,1000*2)
         ontog_mig_N_mat_female = Ab_ontog_mig_N_mat_female * init_adult
         ontog_mig_N_mat_male = Ab_ontog_mig_N_mat_male * init_adult
         
-        temp_imm_N[,,1,x] = ontog_mig_N_imm_female
-        temp_imm_N[,,2,x] = ontog_mig_N_imm_male
-        temp_mat_N[,,1,x] = ontog_mig_N_mat_female
-        temp_mat_N[,,2,x] = ontog_mig_N_mat_male
+        temp_imm_N[,,1,s] = ontog_mig_N_imm_female
+        temp_imm_N[,,2,s] = ontog_mig_N_imm_male
+        temp_mat_N[,,1,s] = ontog_mig_N_mat_female
+        temp_mat_N[,,2,s] = ontog_mig_N_mat_male
         
       }
       
@@ -1277,10 +1310,21 @@ for(cost_travel in 1000){ # c(0,1000,1000*2)
     }
     
     #==update dynamics
-    imm_N_at_Len[,,1,,t+1] <-  temp_imm_N[,,1,]*exp(-imm_fem_M*1/year_step)
-    imm_N_at_Len[,,2,,t+1] <-  temp_imm_N[,,2,]*exp(-imm_male_M*1/year_step)
-    mat_N_at_Len[,,1,,t+1] <-  temp_mat_N[,,1,]*exp(-mat_fem_M*1/year_step)
-    mat_N_at_Len[,,2,,t+1] <-  temp_mat_N[,,2,]*exp(-mat_male_M*1/year_step)
+    if(morta_model == "cody_model"){
+      imm_N_at_Len[,,1,,t+1] <-  temp_imm_N[,,1,]*exp(-imm_fem_M*1/year_step)
+      imm_N_at_Len[,,2,,t+1] <-  temp_imm_N[,,2,]*exp(-imm_male_M*1/year_step)
+      mat_N_at_Len[,,1,,t+1] <-  temp_mat_N[,,1,]*exp(-mat_fem_M*1/year_step)
+      mat_N_at_Len[,,2,,t+1] <-  temp_mat_N[,,2,]*exp(-mat_male_M*1/year_step)
+    }else if(morta_model == "max_model"){
+      
+      mat_df = array(imm_fem_M,dim = c(length(lat),length(lon),length(sizes)))
+      
+      imm_N_at_Len[,,1,,t+1] <- temp_imm_N[,,1,]*exp(-imm_fem_M*1/year_step)
+      imm_N_at_Len[,,2,,t+1] <- temp_imm_N[,,2,]*exp(-imm_male_M*1/year_step)
+      mat_N_at_Len[,,1,,t+1] <- temp_mat_N[,,1,]*exp(-mat_fem_M*1/year_step)
+      mat_N_at_Len[,,2,,t+1] <- temp_mat_N[,,2,]*exp(-mat_male_M*1/year_step)
+      
+    }
     
     #==generate scientific (1 sample per cell grid - could be something else)
     # Data_Geostat
@@ -1454,12 +1498,6 @@ tot_imm<-apply(imm_N_at_Len,c(5),sum,na.rm=T)
 tot_mat<-apply(mat_N_at_Len,c(5),sum,na.rm=T)
 
 x11()
-par(mfrow=c(1,2))
-plot(init_juv)
-plot(init_adult)
-
-
-x11()
 par(mfrow=c(4,1),mar=c(.1,.1,.1,.1),oma=c(4,.1,1,1))
 plot(tot_imm,type='l',las=1,xaxt='n',ylim=c(0,max(tot_imm,tot_mat)))
 lines(tot_mat,lty=2)
@@ -1476,3 +1514,14 @@ plot(tot_cost[(tot_profit>0)],xaxt='n',las=1,type='b',pch=16)
 legend('right',bty='n',legend=c("Total cost"))
 plot(tot_profit[(tot_profit>0)],las=1,type='b',pch=16)
 legend('right',bty='n',legend=c("Total profits"))
+
+x11()
+par(mfrow = c(4,3))
+for(x in 1:12){
+  
+  plot(imm_N_at_Len[,,2,x,600] * land_mask_na,
+       main = paste0("Size: [",sizes[x],", ",sizes[x+1],"] mm"),
+       asp=1)
+  
+}
+

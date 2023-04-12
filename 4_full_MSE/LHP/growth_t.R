@@ -12,6 +12,7 @@ pars_Growth_setting_f_imm$year_LHP <- pars_Growth_setting_f_imm$Years_climsc[t]
 pars_Growth_setting_f_mat$year_LHP <- pars_Growth_setting_f_mat$Years_climsc[t]
 #pars_Growth_setting_f_mat$clim_sc <- pars_Growth_setting_f_mat$clim_sc_test[c]
 
+print("Growth male immature")
 growth_m_imm[t,,,,] <- growth(sizes,
                               binclass,
                               pars_Growth_setting_m_imm,
@@ -20,6 +21,7 @@ growth_m_imm[t,,,,] <- growth(sizes,
                               G_spatial,
                               plot = F)
 
+print("Growth male mature")
 growth_m_mat[t,,,,] <- growth(sizes,
                               binclass,
                               pars_Growth_setting_m_mat,
@@ -28,6 +30,7 @@ growth_m_mat[t,,,,] <- growth(sizes,
                               G_spatial,
                               plot = F)
 
+print("Growth female immature")
 growth_f_imm[t,,,,] <- growth(sizes,
                               binclass,
                               pars_Growth_setting_f_imm ,
@@ -36,6 +39,7 @@ growth_f_imm[t,,,,] <- growth(sizes,
                               G_spatial,
                               plot = F)
 
+print("Growth female mature")
 growth_f_mat[t,,,,] <- growth(sizes,
                               binclass,
                               pars_Growth_setting_f_mat,
@@ -48,3 +52,4 @@ size_transition_mat_f_imm  <- growth_f_imm
 size_transition_mat_f_mat  <- growth_f_mat
 size_transition_mat_m_imm  <- growth_m_imm
 size_transition_mat_m_mat  <- growth_m_mat
+
