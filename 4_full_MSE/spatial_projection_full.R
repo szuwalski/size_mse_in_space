@@ -118,11 +118,33 @@ ad_size = 45 # size at which crabs are considered mature
 
 ## Sex and maturity
 #------------------
-sexN		 <-2
-imm_fem_M    <-0.32
-imm_male_M   <-0.32
-mat_fem_M    <-0.26
-mat_male_M   <-0.28
+sexN = 2
+
+imm_fem_M = 0.32
+imm_male_M = 0.32
+mat_fem_M = 0.26
+mat_male_M = 0.28
+
+morta_sd_imm = 0.1
+morta_sd_mat = 0.1
+
+morta_model = "max_model"
+if(morta_model == "max_model"){
+  
+  #==Maxime's morta parameterization
+  ## Load morta settings for spatially varying parameters
+  G_spatial <- F 
+  Morta_spatial <- F # are life history parameters spatial?
+  source("4_full_MSE/LHP/morta_settings.R")
+  
+  ## Load function for morta
+  source("4_full_MSE/LHP/morta.R")
+  
+}
+
+
+## Recruitment
+#-------------
 rec_sizes    <-5
 prop_rec     <-c(.25,.4,.25,.075,0.025)
 
@@ -147,6 +169,7 @@ move_time		  <-rep(c(1,1,1,1,1,1,1,1,1,1,1,1),year_n)
 molt_time  	  <-rbind(rep(c(0,0,0,0,0,0,0,0,0,1,0,0),year_n),rep(c(0,0,0,0,0,0,0,0,0,1,0,0),year_n)) # females first, males second
 mate_time 	  <-rep(c(0,0,0,0,0,0,0,1,0,1,0,0),year_n)
 SA_time       <-rep(c(0,0,0,0,0,0,0,0,0,1,0,0),year_n)
+january_month <-rep(c(1,0,0,0,0,0,0,0,0,0,0,0),year_n)
 
 ## Survey data
 #-------------
@@ -319,8 +342,6 @@ par(mfrow=c(1,2))
 plot(init_juv * land_mask_na, main = "", asp = 1)
 plot(init_adult * land_mask_na, main = "", asp = 1)
 
-
-
 if(size_class_settings=="fine"){
   imm_N_at_Len[,,,,1]<-array(0,dim = c(length(lat),length(lon),2,length(sizes)))
   mat_N_at_Len[,,,,1]<-array(0,dim = c(length(lat),length(lon),2,length(sizes)))
@@ -342,7 +363,6 @@ if(size_class_settings=="rough"){
     mat_N_at_Len[,,2,i,1] <- (as.matrix(RFsimulate(model, lon, rev(lat), grid=TRUE)))
 
   }
-  
   
 }
 
@@ -521,7 +541,6 @@ if(growth_model == "max_model"){
 }
 
 terminal_molt<-1
-
 
 ## Molting probability
 if(size_class_settings == "fine") term_molt_prob<-c(0,0,0,.1,.2,.3,.4,.4,.4,.4,.4,.75,.9,1,1,1,1,1,1,1,1,1)
@@ -758,7 +777,6 @@ list_info = data.frame(it = 0,
 max_quota_it = 100 # maximum iteration for filling the quota
 use_harv = 1
 
-
 for(cost_travel in 1000){ # c(0,1000,1000*2)
   
   total_spatial_catch<-array(0,dim=c(length(lat),length(lon),sexN,length(sizes),length(proj_period)))
@@ -782,10 +800,29 @@ for(cost_travel in 1000){ # c(0,1000,1000*2)
     #   collect_survey_data()
     
     #==========================
+    #==INIT FOR EACH YEAR
+    #==========================
+    # The environmental covariates are defined at yearly time step,
+    # so at the moment we parameter life history traits at a yearly 
+    # scale
+    if(january_month[t] == T & growth_model == "max_model"){
+      
+      print("init growth")
+      source("4_full_MSE/LHP/growth_t.R")
+      
+    }
+    
+    if(january_month[t] == T & morta_model == "max_model"){
+      
+      print("init morta")
+      source("4_full_MSE/LHP/morta_t.R")
+      
+    }
+    
+    #==========================
     #==FISHERY OCCURS
     #==========================
     #==indices: lat,lon,sex,size,time
-    
     if(fish_time[t]==1)
     {
       for(f in 1:fishers)
@@ -934,7 +971,7 @@ for(cost_travel in 1000){ # c(0,1000,1000*2)
                 catch_by_fisher[chosen_patch[1],chosen_patch[2],sex,x,t,f]  <- catch_by_fisher[chosen_patch[1],chosen_patch[2],sex,x,t,f] + temp_catch
               }
             #sum(catch_by_fisher[chosen_patch[1],chosen_patch[2],,,t,f])
-            quota_remaining<-quota_remaining - sum(catch_by_fisher[chosen_patch[1],chosen_patch[2],,,t,f])
+            quota_remaining <- quota_remaining - sum(catch_by_fisher[chosen_patch[1],chosen_patch[2],,,t,f])
             cost_by_fisher[chosen_patch[1],chosen_patch[2],t,f]   <- cost_by_fisher[chosen_patch[1],chosen_patch[2],t,f] + cost_patch[chosen_patch[1],chosen_patch[2]]
             
             #==update temp array of n at len
@@ -970,16 +1007,6 @@ for(cost_travel in 1000){ # c(0,1000,1000*2)
     
     if( molt_time[1,t]==1 | molt_time[2,t]==1 )
     {
-      
-      ## Maxime's growth model init
-      #----------------------------
-      if(growth_model == "max_model"){
-        
-        print("growth Max")
-        source("4_full_MSE/LHP/growth_t.R")
-        
-      }
-      
       
       # bot_temp_dat<-read.csv(paste("temp_data/bot_temp_",time,".csv",sep=""),header=T)
       for(x in 1:nrow(imm_N_at_Len[,,,,t])){
@@ -1311,18 +1338,20 @@ for(cost_travel in 1000){ # c(0,1000,1000*2)
     
     #==update dynamics
     if(morta_model == "cody_model"){
+      
+      print("Cody morta")
       imm_N_at_Len[,,1,,t+1] <-  temp_imm_N[,,1,]*exp(-imm_fem_M*1/year_step)
       imm_N_at_Len[,,2,,t+1] <-  temp_imm_N[,,2,]*exp(-imm_male_M*1/year_step)
       mat_N_at_Len[,,1,,t+1] <-  temp_mat_N[,,1,]*exp(-mat_fem_M*1/year_step)
       mat_N_at_Len[,,2,,t+1] <-  temp_mat_N[,,2,]*exp(-mat_male_M*1/year_step)
+      
     }else if(morta_model == "max_model"){
       
-      mat_df = array(imm_fem_M,dim = c(length(lat),length(lon),length(sizes)))
-      
-      imm_N_at_Len[,,1,,t+1] <- temp_imm_N[,,1,]*exp(-imm_fem_M*1/year_step)
-      imm_N_at_Len[,,2,,t+1] <- temp_imm_N[,,2,]*exp(-imm_male_M*1/year_step)
-      mat_N_at_Len[,,1,,t+1] <- temp_mat_N[,,1,]*exp(-mat_fem_M*1/year_step)
-      mat_N_at_Len[,,2,,t+1] <- temp_mat_N[,,2,]*exp(-mat_male_M*1/year_step)
+      print("Max morta")
+      imm_N_at_Len[,,1,,t+1] <- temp_imm_N[,,1,]*exp(-imm_fem_M_size*1/year_step)
+      imm_N_at_Len[,,2,,t+1] <- temp_imm_N[,,2,]*exp(-imm_male_M_size*1/year_step)
+      mat_N_at_Len[,,1,,t+1] <- temp_mat_N[,,1,]*exp(-mat_fem_M_size*1/year_step)
+      mat_N_at_Len[,,2,,t+1] <- temp_mat_N[,,2,]*exp(-mat_male_size*1/year_step)
       
     }
     

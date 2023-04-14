@@ -1,5 +1,5 @@
-## Growth at time step t
-#-----------------------
+## Morta at time step t
+#----------------------
 pars_Growth_setting_m_imm$year_LHP <- pars_Growth_setting_m_imm$Years_climsc[t]
 #pars_Growth_setting_m_imm$clim_sc <- pars_Growth_setting_m_imm$clim_sc_test[c]
 
@@ -16,8 +16,7 @@ print("Growth male immature")
 growth_m_imm[t,,,,] <- growth(sizes,
                               binclass,
                               pars_Growth_setting_m_imm,
-                              n_s,
-                              n_p,
+                              n_s,n_p,
                               G_spatial,
                               plot = F)
 
@@ -25,8 +24,7 @@ print("Growth male mature")
 growth_m_mat[t,,,,] <- growth(sizes,
                               binclass,
                               pars_Growth_setting_m_mat,
-                              n_s,
-                              n_p,
+                              n_s,n_p,
                               G_spatial,
                               plot = F)
 
@@ -34,8 +32,7 @@ print("Growth female immature")
 growth_f_imm[t,,,,] <- growth(sizes,
                               binclass,
                               pars_Growth_setting_f_imm ,
-                              n_s,
-                              n_p,
+                              n_s,n_p,
                               G_spatial,
                               plot = F)
 
@@ -43,8 +40,7 @@ print("Growth female mature")
 growth_f_mat[t,,,,] <- growth(sizes,
                               binclass,
                               pars_Growth_setting_f_mat,
-                              n_s,
-                              n_p,
+                              n_s,n_p,
                               G_spatial,
                               plot = F)
 

@@ -1,91 +1,54 @@
-######################
-## Modelling mortality
-######################
+## Morta at time step t
+#----------------------
+pars_Morta_setting_m_imm$year_LHP <- pars_Morta_setting_m_imm$Years_climsc[t]
+#pars_Growth_setting_m_imm$clim_sc <- pars_Growth_setting_m_imm$clim_sc_test[c]
 
-mortality <- function(E_morta_par,
-                      pars_LHP_setting,
-                      n_s,n_p,
-                      G_spatial=F,
-                      plot=FALSE){
+pars_Morta_setting_m_mat$year_LHP <- pars_Morta_setting_m_mat$Years_climsc[t]
+#pars_Growth_setting_m_mat$clim_sc <- pars_Growth_setting_m_mat$clim_sc_test[c]
+
+pars_Morta_setting_f_imm$year_LHP <- pars_Morta_setting_f_imm$Years_climsc[t]
+#pars_Growth_setting_f_imm$clim_sc <- pars_Growth_setting_f_imm$clim_sc_test[c]
+
+pars_Morta_setting_f_mat$year_LHP <- pars_Morta_setting_f_mat$Years_climsc[t]
+#pars_Growth_setting_f_mat$clim_sc <- pars_Growth_setting_f_mat$clim_sc_test[c]
+
+imm_male_M_size = array(0,dim = c(length(lat),length(lon),length(sizes)))
+mat_male_size = array(0,dim = c(length(lat),length(lon),length(sizes)))
+imm_fem_M_size = array(0,dim = c(length(lat),length(lon),length(sizes)))
+mat_fem_M_size = array(0,dim = c(length(lat),length(lon),length(sizes)))
+
+imm_male_M_mat <- mortality(E_morta_par = imm_male_M, # <-- could be size specific (but very long)
+                            pars_Morta_setting_m_imm,
+                            n_s,
+                            G_spatial=F,
+                            plot=FALSE)
+
+mat_male_M_mat <- mortality(E_morta_par = mat_male_M, # <-- could be size specific (but very long)
+                            pars_Morta_setting_m_mat,
+                            n_s,
+                            G_spatial=F,
+                            plot=FALSE)
+
   
-  #-- Map of growth matrix
-  morta_matrix = array (data = 0, dim = c(n_s))
-  morta_par = array (data = NA, dim = c(n_s,pars_LHP_setting$n_grpar))
+imm_fem_M_mat <- mortality(E_morta_par = imm_fem_M, # <-- could be size specific (but very long)
+                           pars_Morta_setting_f_imm,
+                           n_s,
+                           G_spatial=F,
+                           plot=FALSE)
+
+mat_fem_M_mat <- mortality(E_morta_par = mat_fem_M, # <-- could be size specific (but very long)
+                           pars_Morta_setting_f_mat,
+                           n_s,
+                           G_spatial=F,
+                           plot=FALSE)
+
+for(s in 1:n_p){
   
-  #-- no space
-  if (!pars_LHP_setting$LHP_spatial) {
-    for (k in 1:n_s) {
-      morta_matrix[k] = E_morta_par
-    }
+  # print(s)
     
-  }else{
-    
-    # -- Space  
-    source("2_Max_spatial_projection/LHP_functions/pars_LHP_map.R")
-    
-    growth_par <- array(0, c(n_s,pars_LHP_setting$n_grpar))
-    par <- pars_LHP_map(
-      pars_LHP_setting$pref_hab,
-      pars_LHP_setting$lon,
-      pars_LHP_setting$lat,
-      pars_LHP_setting$clim_sc,
-      pars_LHP_setting$year_LHP,
-      pars_LHP_setting$pars_pref_hab,
-      pars_LHP_setting$x_omega,
-      pars_LHP_setting$x_epsilon,
-      pars_LHP_setting$pars_LHP[, i],
-      pars_LHP_setting$scale_g,
-      pars_LHP_setting$LHP,
-      pars_LHP_setting$ad_eff,
-      plot=FALSE
-    )
-    
-    morta_matrix =  par$LHP_pars_map
-    
-  }
-  
-  # match lat/lon with cell number
-  Morta_temp <- melt(morta_matrix)
-  colnames(Morta_temp) <- c("cell","morta")
-  Morta_temp <- data.frame(Morta_temp)
-  
-  Morta_temp$Size_class_from <- as.factor(Morta_temp$Size_class_from)
-  Morta_temp$Size_class_to <- as.factor(Morta_temp$Size_class_to)
-  
-  Cell <- data.frame(cell = loc_x[,1], lat=loc_x[,3],lon=loc_x[,2])
-  Morta <- left_join(Morta_temp,Cell,by = "cell")
-  
-  # Transform to appropriate format for OM input
-  lon2 <- data.frame(lon=lon,lon_nb = c(1:length(lon)))
-  lat2 <- data.frame(lat=lat,lat_nb = c(1:length(lat)))
-  colnames(lon2) <- c("lon","cell")
-  colnames(lat2) <- c("lat","cell")
-  Morta_temp2 <- left_join(Morta, lon2,by = c("cell", "lon"))
-  Morta_temp3 <- left_join(Morta_temp2, lat2,by = c("cell", "lat"))
-  
-  if(plot==TRUE){
-    
-    # Plot
-    if(!G_spatial) {p_size_trans <- p }else{ p_size_trans <- p + facet_wrap(~cell)}
-    
-    p <- ggplot()+
-      geom_raster(Morta_temp2, mapping=aes(lon, lat, fill= morta))+
-      scale_fill_viridis()+
-      theme_bw()+ 
-      geom_sf(data = world_sf,fill="black",color=NA)+ 
-      coord_sf(xlim=range(loc_x$lon), ylim=range((loc_x$lat)))
-    
-    plot(p)
-    
-  }
-  
-  # Format for pop. dyn model
-  temp <- Morta_temp2 %>% mutate(value=morta) %>% dplyr::select(lat,lon,morta)
-  Morta_OM <- acast(temp, lat~lon)
-  Morta_OM <- ifelse(is.na(Morta_OM),0,Morta_OM)
-  
-  return(Morta_OM)
+  imm_male_M_size[,,s] = imm_male_M_mat
+  mat_male_size[,,s] = mat_male_M_mat
+  imm_fem_M_size[,,s] = imm_fem_M_mat
+  imm_male_M_size[,,s] = mat_fem_M_mat
   
 }
-
-

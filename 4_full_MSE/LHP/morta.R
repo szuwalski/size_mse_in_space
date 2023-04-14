@@ -4,7 +4,7 @@
 
 mortality <- function(E_morta_par,
                       pars_LHP_setting,
-                      n_s,n_p,
+                      n_s,
                       G_spatial=F,
                       plot=FALSE){
   
@@ -33,7 +33,7 @@ mortality <- function(E_morta_par,
       pars_LHP_setting$pars_pref_hab,
       pars_LHP_setting$x_omega,
       pars_LHP_setting$x_epsilon,
-      pars_LHP_setting$pars_LHP[, i],
+      pars_LHP_setting$pars_LHP,
       pars_LHP_setting$scale_g,
       pars_LHP_setting$LHP,
       pars_LHP_setting$ad_eff,
@@ -45,13 +45,9 @@ mortality <- function(E_morta_par,
   }
   
   # match lat/lon with cell number
-  Morta_temp <- melt(morta_matrix)
-  colnames(Morta_temp) <- c("cell","morta")
-  Morta_temp <- data.frame(Morta_temp)
-  
-  Morta_temp$Size_class_from <- as.factor(Morta_temp$Size_class_from)
-  Morta_temp$Size_class_to <- as.factor(Morta_temp$Size_class_to)
-  
+  Morta_temp <- data.frame(cell = 1:n_s,
+                           morta=morta_matrix)
+
   Cell <- data.frame(cell = loc_x[,1], lat=loc_x[,3],lon=loc_x[,2])
   Morta <- left_join(Morta_temp,Cell,by = "cell")
   
@@ -80,12 +76,17 @@ mortality <- function(E_morta_par,
   }
   
   # Format for pop. dyn model
-  temp <- Morta_temp2 %>% mutate(value=morta) %>% dplyr::select(lat,lon,morta)
-  Morta_OM <- acast(temp, lat~lon)
+  temp <- Morta_temp2 %>% 
+    mutate(value=morta) %>% 
+    dplyr::select(lat,lon,morta) %>% 
+    arrange(desc(lat))
+  
+  Morta_OM <- t(g(acast(temp, lat~lon,value.var = "morta")))
   Morta_OM <- ifelse(is.na(Morta_OM),0,Morta_OM)
+  
+  # plot(t(g(acast(temp, lat~lon))))
   
   return(Morta_OM)
   
 }
-
 
