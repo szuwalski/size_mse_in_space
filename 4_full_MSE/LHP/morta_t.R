@@ -20,26 +20,26 @@ mat_fem_M_size = array(0,dim = c(length(lat),length(lon),length(sizes)))
 imm_male_M_mat <- mortality(E_morta_par = imm_male_M, # <-- could be size specific (but very long)
                             pars_Morta_setting_m_imm,
                             n_s,
-                            G_spatial=F,
+                            M_spatial=F,
                             plot=FALSE)
 
 mat_male_M_mat <- mortality(E_morta_par = mat_male_M, # <-- could be size specific (but very long)
                             pars_Morta_setting_m_mat,
                             n_s,
-                            G_spatial=F,
+                            M_spatial=F,
                             plot=FALSE)
 
   
 imm_fem_M_mat <- mortality(E_morta_par = imm_fem_M, # <-- could be size specific (but very long)
                            pars_Morta_setting_f_imm,
                            n_s,
-                           G_spatial=F,
+                           M_spatial=F,
                            plot=FALSE)
 
 mat_fem_M_mat <- mortality(E_morta_par = mat_fem_M, # <-- could be size specific (but very long)
                            pars_Morta_setting_f_mat,
                            n_s,
-                           G_spatial=F,
+                           M_spatial=F,
                            plot=FALSE)
 
 for(s in 1:n_p){

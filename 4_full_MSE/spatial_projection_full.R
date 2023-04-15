@@ -558,6 +558,27 @@ recruit_male = unlist(Snow_Out$Recruitment$recruits[2,])
 meanlog_recruit_male = mean(log(recruit_male))
 sdlog_male = sd(log(recruit_male))
 
+# Only mean recruitment is affected by growth
+sd_meanlog_recruit_female = recruit_female / 0.1
+sd_meanlog_recruit_male = recruit_male / 0.1
+
+recruit_model = "max_model"
+if(recruit_model == "max_model"){
+  
+  #==Maxime's recruit parameterization
+  ## Load recruit settings for spatially varying parameters
+  G_spatial <- F 
+  Recruit_spatial <- F # are life history parameters spatial?
+  source("4_full_MSE/LHP/recruit_settings.R")
+  
+  ## Load function for morta
+  source("4_full_MSE/LHP/recruitment.R")
+  
+}
+
+
+
+
 
 ## fishery pars
 #--------------
@@ -818,6 +839,14 @@ for(cost_travel in 1000){ # c(0,1000,1000*2)
       source("4_full_MSE/LHP/morta_t.R")
       
     }
+    
+    if(january_month[t] == T & recruit_model == "max_model"){
+      
+      print("init recruit")
+      source("4_full_MSE/LHP/recruit_t.R")
+      
+    }
+    
     
     #==========================
     #==FISHERY OCCURS
@@ -1319,14 +1348,26 @@ for(cost_travel in 1000){ # c(0,1000,1000*2)
       #==this implants the original recruitment with some error
       #==ultimately we need an algorithm to determine location and intensity of recruitment
       #==teleconnections postdoc will hopefully help with this
-      aggreg_rec_1 = rlnorm(n = 1, mean = meanlog_recruit_female, sdlog = sdlog_female)
-      aggreg_rec_2 = rlnorm(n = 1, mean = meanlog_recruit_male, sdlog = sdlog_male)
+      
+      print('Recruit')
+      
+      if(recruit_model == "cody_model"){
+        
+        meanlog_recruit_male_2 = meanlog_recruit_male
+        meanlog_recruit_female_2 = meanlog_recruit_female
+        
+      }else if(recruit_model == "max_model"){
+        
+        source("4_full_MSE/LHP/recruit_t.R")
+        
+      }
+      
+      aggreg_rec_1 = rlnorm(n = 1, mean = meanlog_recruit_female_2, sdlog = sdlog_female)
+      aggreg_rec_2 = rlnorm(n = 1, mean = meanlog_recruit_male_2, sdlog = sdlog_male)
       
       tmp_rec_1 <- init_juv * aggreg_rec_1
-      # matrix(rep(aggreg_rec_1),ncol=ncol(imm_N_at_Len[,,1,1,1]),nrow=nrow(imm_N_at_Len[,,1,1,1]))
       tmp_rec_1[tmp_rec_1<0]<-0
       tmp_rec_2 <- init_juv * aggreg_rec_2
-      # matrix(rnorm(length(imm_N_at_Len[,,2,1,1]),1,1),ncol=ncol(imm_N_at_Len[,,1,1,1]),nrow=nrow(imm_N_at_Len[,,2,1,1]))
       tmp_rec_2[tmp_rec_2<0]<-0
       
       for(r in 1:rec_sizes)
@@ -1334,6 +1375,7 @@ for(cost_travel in 1000){ # c(0,1000,1000*2)
         temp_imm_N[,,1,r] <- temp_imm_N[,,1,r] + imm_N_at_Len[,,1,r,1]*tmp_rec_1*prop_rec[r]
         temp_imm_N[,,2,r] <- temp_imm_N[,,2,r] + imm_N_at_Len[,,2,r,1]*tmp_rec_2*prop_rec[r]
       }
+      
     }
     
     #==update dynamics

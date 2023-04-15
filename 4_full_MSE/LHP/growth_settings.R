@@ -71,8 +71,6 @@ ad_eff_growth <- TRUE # additive or multiplicative effect
 pref_hab_growth= c("quadr") # peferential habitat function (logi, quad, lin)
 pars_pref_hab_growth = c(4,2)
 
-
-
 # Growth Settings ---------------------------------------------------------
 # -------------------------------------------------------------------------
 source("2_Max_spatial_projection/LHP_functions/pars_LHP_setting.R")

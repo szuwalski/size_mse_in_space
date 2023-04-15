@@ -9,13 +9,12 @@ LHP = "morta"
 # -------------------------------------------------------------------------
 
 # - Is growth spatially defined ? -----------------------------------------
-Morta_spatial = TRUE
+M_spatial = TRUE
 
 # - Parameters for spatial field ------------------------------------------
 scale_g <- 1.5 # scale of the RF
 x_omega = 0.1 # how much of the total variance represent omega (in %)
 x_epsilon = 0.05 # how much of the total variance represent epsilon (in %)
-
 
 # Parameters --------------------------------------------------------------
 # -------------------------------------------------------------------------
