@@ -128,12 +128,12 @@ mat_male_M = 0.28
 morta_sd_imm = 0.1
 morta_sd_mat = 0.1
 
-morta_model = "max_model"
+morta_model = "cody_model"
 if(morta_model == "max_model"){
   
   #==Maxime's morta parameterization
   ## Load morta settings for spatially varying parameters
-  G_spatial <- F 
+  G_spatial <- F
   Morta_spatial <- F # are life history parameters spatial?
   source("4_full_MSE/LHP/morta_settings.R")
   
@@ -225,6 +225,7 @@ homoMov <- FALSE
 ## Stock assessment
 #------------------
 SA <- "GMACS"
+SA = "none"
 # "spatialIPM": spatially-explicit model IPM
 # "nonspatialIPM": non spatial model IPM
 # "GMACS": standard stock assessment model
@@ -487,7 +488,7 @@ growth_param[7:dim(growth_param)[1],] <- growth_param[7:dim(growth_param)[1],] %
   dplyr::mutate(model = "molt prob")
 
 # Type of model
-growth_model <- "max_model" # "max_model" "cody_model"
+growth_model <- "cody_model" # "max_model" "cody_model"
 # Cody's model --> non-spatial life-history parameters
 # Maxime's model --> spatially varying life-history parameters
 
@@ -562,7 +563,7 @@ sdlog_male = sd(log(recruit_male))
 sd_meanlog_recruit_female = recruit_female / 0.1
 sd_meanlog_recruit_male = recruit_male / 0.1
 
-recruit_model = "max_model"
+recruit_model = "cody_model"
 if(recruit_model == "max_model"){
   
   #==Maxime's recruit parameterization
@@ -575,10 +576,6 @@ if(recruit_model == "max_model"){
   source("4_full_MSE/LHP/recruitment.R")
   
 }
-
-
-
-
 
 ## fishery pars
 #--------------
@@ -606,7 +603,7 @@ move_len_95<-70
 ## Movement matrices
 #-------------------
 # --> might need to make different matrices for mature and immature
-compute_movement_matrix = T
+compute_movement_matrix = F
 
 if(compute_movement_matrix){
   
@@ -684,6 +681,11 @@ if(compute_movement_matrix){
   # test = matrix(stationary_g_ad,nrow=40,ncol=40,byrow = T)
   # x11();plot(test)
   
+}else{
+  
+  load("4_full_MSE/data/mfraction_gg_ad.RData")
+  load("4_full_MSE/data/mfraction_gg_juv.RData")
+  
 }
 
 ## Fishery selectivity
@@ -695,14 +697,14 @@ selec_curve = repfile$selectivity$Start_Y %>%
 
 fish_sel = selec_curve
 
-# fish_sel_50_f<-NA
-# fish_sel_95_f<-NA
-# fish_sel_50_m<-50
-# fish_sel_95_m<-101
-# 
-# fish_sel<-rbind(1/(1+exp(-log(19)*(sizes-fish_sel_50_f)/(fish_sel_95_f-fish_sel_50_f))),
-#                 1/(1+exp(-log(19)*(sizes-fish_sel_50_m)/(fish_sel_95_m-fish_sel_50_m))))
-# fish_sel[is.na(fish_sel)]<-0
+fish_sel_50_f<-NA
+fish_sel_95_f<-NA
+fish_sel_50_m<-50
+fish_sel_95_m<-101
+
+fish_sel<-rbind(1/(1+exp(-log(19)*(sizes-fish_sel_50_f)/(fish_sel_95_f-fish_sel_50_f))),
+                1/(1+exp(-log(19)*(sizes-fish_sel_50_m)/(fish_sel_95_m-fish_sel_50_m))))
+fish_sel[is.na(fish_sel)]<-0
 
 #==this function sets a dispersal kernel for every cell
 #==sd is 'one grid square'  
@@ -768,11 +770,26 @@ cost_travel <- 0
 cost_patch <- cost_travel * distance_map + cost_fish
 price <- 1.5
 
-fishers<-20
-quota<-rep(1000,fishers)
+fishers<-30
+quota<-rep(1e7/fishers,fishers)
 
 fishing_process="stochastic"
 # fishing_process="max_benefit_min_dist"
+
+
+#================================================
+# Management
+#================================================
+HCR = "cody"
+
+source("4_full_MSE/Management/proj_to_fish.R")
+
+HCR = "cody"
+
+fmsy_proxy = 0.5
+bmsy_proxy = 183.1*1e9
+b_hcr = 2
+a_hcr = 0
 
 #=============================================
 # PROJJEEEECCCT
@@ -798,9 +815,12 @@ list_info = data.frame(it = 0,
 max_quota_it = 100 # maximum iteration for filling the quota
 use_harv = 1
 
+print_distrib = F
+
 for(cost_travel in 1000){ # c(0,1000,1000*2)
   
   total_spatial_catch<-array(0,dim=c(length(lat),length(lon),sexN,length(sizes),length(proj_period)))
+  total_spatial_catch_nb<-array(0,dim=c(length(lat),length(lon),sexN,length(sizes),length(proj_period)))
   catch_by_fisher<-array(0,dim=c(length(lat),length(lon),sexN,length(sizes),length(proj_period),fishers))
   profit_by_fisher<-array(0,dim=c(length(lat),length(lon),length(proj_period),fishers))
   cost_by_fisher<-array(0,dim=c(length(lat),length(lon),length(proj_period),fishers))
@@ -848,11 +868,13 @@ for(cost_travel in 1000){ # c(0,1000,1000*2)
     }
     
     
+    if(print_distrib){plot(temp_mat_N[,,2,5],main="FIRST")}
+
     #==========================
     #==FISHERY OCCURS
     #==========================
     #==indices: lat,lon,sex,size,time
-    if(fish_time[t]==1)
+    if(fish_time[t]==1 & sum(quota) > 0)
     {
       for(f in 1:fishers)
       {
@@ -887,7 +909,7 @@ for(cost_travel in 1000){ # c(0,1000,1000*2)
           
           prob_net = net_benefit_patch[which(!is.na(net_benefit_patch) & net_benefit_patch > 0)]
           chosen_patch<-which(net_benefit_patch == sample(prob_net,size=1,prob=prob_net),arr.ind=T)
-          chosen_patch=chosen_patch[1,]
+          chosen_patch=chosen_patch[sample(1:nrow(chosen_patch),1),]
           
         }
         
@@ -908,7 +930,7 @@ for(cost_travel in 1000){ # c(0,1000,1000*2)
             
             prob_net = net_benefit_patch[which(!is.na(net_benefit_patch) & net_benefit_patch > 0)]
             chosen_patch<-which(net_benefit_patch == sample(prob_net,size=1,prob=),arr.ind=T)
-            chosen_patch=chosen_patch[1,]
+            chosen_patch=chosen_patch[sample(1:nrow(chosen_patch),1),]
             
           }
           
@@ -937,9 +959,14 @@ for(cost_travel in 1000){ # c(0,1000,1000*2)
             for(sex in 1:2)
               for(x in 1:length(sizes))
               {
+                
                 total_spatial_catch[chosen_patch[1],chosen_patch[2],sex,x,t] <- total_spatial_catch[chosen_patch[1],chosen_patch[2],sex,x,t] + 
                   temp_imm_N[chosen_patch[1],chosen_patch[2],sex,x]*fish_sel[sex,x]*wt_at_len[sex,x] + 
                   temp_mat_N[chosen_patch[1],chosen_patch[2],sex,x]*fish_sel[sex,x]*wt_at_len[sex,x]
+                
+                total_spatial_catch_nb[chosen_patch[1],chosen_patch[2],sex,x,t] <- total_spatial_catch_nb[chosen_patch[1],chosen_patch[2],sex,x,t] + 
+                  temp_imm_N[chosen_patch[1],chosen_patch[2],sex,x]*fish_sel[sex,x] + 
+                  temp_mat_N[chosen_patch[1],chosen_patch[2],sex,x]*fish_sel[sex,x]
                 
                 temp_catch <- temp_imm_N[chosen_patch[1],chosen_patch[2],sex,x]*fish_sel[sex,x]*wt_at_len[sex,x]*use_harv + 
                   temp_mat_N[chosen_patch[1],chosen_patch[2],sex,x]*fish_sel[sex,x]*wt_at_len[sex,x]*use_harv
@@ -985,7 +1012,6 @@ for(cost_travel in 1000){ # c(0,1000,1000*2)
             
             if(print_messages) print(paste0("potential_catch<=quota_remaining | potential_catch=",potential_catch,"| quota_remaining=",quota_remaining,"| use_harv=",use_harv))
             
-            
             temp_catch<-0
             for(sex in 1:2)
               for(x in 1:length(sizes))
@@ -994,6 +1020,10 @@ for(cost_travel in 1000){ # c(0,1000,1000*2)
                   temp_imm_N[chosen_patch[1],chosen_patch[2],sex,x]*fish_sel[sex,x]*use_harv + 
                   temp_mat_N[chosen_patch[1],chosen_patch[2],sex,x]*fish_sel[sex,x]*use_harv  
 
+                total_spatial_catch_nb[chosen_patch[1],chosen_patch[2],sex,x,t] <- total_spatial_catch_nb[chosen_patch[1],chosen_patch[2],sex,x,t] + 
+                  temp_imm_N[chosen_patch[1],chosen_patch[2],sex,x]*fish_sel[sex,x] + 
+                  temp_mat_N[chosen_patch[1],chosen_patch[2],sex,x]*fish_sel[sex,x]
+                
                 temp_catch<- temp_imm_N[chosen_patch[1],chosen_patch[2],sex,x]*fish_sel[sex,x]*wt_at_len[sex,x]*use_harv + 
                   temp_mat_N[chosen_patch[1],chosen_patch[2],sex,x]*fish_sel[sex,x]*wt_at_len[sex,x]*use_harv
                 
@@ -1027,13 +1057,14 @@ for(cost_travel in 1000){ # c(0,1000,1000*2)
         
       }
       
+      if(print_distrib){plot(temp_mat_N[,,2,5],main="FISHERY OCCURED")}
+      
     }
     
     
     #==========================
     #==GROWTH OCCURS
     #==========================
-    
     if( molt_time[1,t]==1 | molt_time[2,t]==1 )
     {
       
@@ -1185,12 +1216,13 @@ for(cost_travel in 1000){ # c(0,1000,1000*2)
       }
       
       for(s in which_ad_size:last_size_mig){
-        ontog_mig_N_imm_female = c()
-        ontog_mig_N_imm_male = c()
-        ontog_mig_N_mat_female = c()
-        ontog_mig_N_mat_male = c()
-        for(x in length(lon)){
-          for(y in length(lat)){
+        print(s)
+        ontog_mig_N_imm_female = 0
+        ontog_mig_N_imm_male = 0
+        ontog_mig_N_mat_female = 0
+        ontog_mig_N_mat_male = 0
+        for(x in 1:length(lon)){
+          for(y in 1:length(lat)){
             if(init_juv[x,y] > 0){
               
               ontog_mig_N_imm_female = ontog_mig_N_imm_female + temp_imm_N[x,y,1,s]
@@ -1223,6 +1255,8 @@ for(cost_travel in 1000){ # c(0,1000,1000*2)
         temp_mat_N[,,2,s] = ontog_mig_N_mat_male
         
       }
+      
+      if(print_distrib){plot(temp_mat_N[,,2,5],main="GROWTH OCCURED")}
       
     }
     
@@ -1366,15 +1400,15 @@ for(cost_travel in 1000){ # c(0,1000,1000*2)
       aggreg_rec_2 = rlnorm(n = 1, mean = meanlog_recruit_male_2, sdlog = sdlog_male)
       
       tmp_rec_1 <- init_juv * aggreg_rec_1
-      tmp_rec_1[tmp_rec_1<0]<-0
       tmp_rec_2 <- init_juv * aggreg_rec_2
-      tmp_rec_2[tmp_rec_2<0]<-0
-      
+
       for(r in 1:rec_sizes)
       {
         temp_imm_N[,,1,r] <- temp_imm_N[,,1,r] + imm_N_at_Len[,,1,r,1]*tmp_rec_1*prop_rec[r]
         temp_imm_N[,,2,r] <- temp_imm_N[,,2,r] + imm_N_at_Len[,,2,r,1]*tmp_rec_2*prop_rec[r]
       }
+      
+      if(print_distrib){plot(temp_mat_N[,,2,5],main="RECRUIT OCCURED")}
       
     }
     
@@ -1399,10 +1433,6 @@ for(cost_travel in 1000){ # c(0,1000,1000*2)
     
     #==generate scientific (1 sample per cell grid - could be something else)
     # Data_Geostat
-    
-    ###############################
-    ## Pass to do.call to go faster
-    ###############################
     if(survey_time[t] == 1){
       
       if(print_messages) print("Simulate scientific data")
@@ -1521,6 +1551,11 @@ for(cost_travel in 1000){ # c(0,1000,1000*2)
       catch_df$size_bin = as.character(catch_df$size_bin)
       catch_N = rbind(catch_N,catch_df)
       
+      catch_N %>% 
+        filter(Year > 2018) %>% 
+        group_by(Year) %>% 
+        dplyr::summarise(Catches_N = sum(Catches_N))
+      
       if(print_messages) print("Make Stock assessment")
       
       if(SA == "spatialIPM"){
@@ -1538,6 +1573,78 @@ for(cost_travel in 1000){ # c(0,1000,1000*2)
       if(SA == "GMACS"){
         
       }
+      
+      if(SA == "none"){
+        
+        n_at_size = c()
+        c_at_size = c()
+        f_at_size = c()
+        for(s in 1:length(sizes)){
+          
+          # c: catch, m: natural mortality, n: abundance
+          # --> c = f / (f + m) * n * (1 - exp(-(f + m)))
+          imm_male_M = 0.32 
+          mat_male_M = 0.28
+          m = 0.32
+          
+          c = sum(total_spatial_catch_nb[,,2,s,(t-9):t])
+          
+          ab_at_t = c()
+          catch_at_t = c()
+          ab_at_t_mat = matrix(0,nrow = length(lat),ncol = length(lon))
+          catch_at_t_mat = matrix(0,nrow = length(lat),ncol = length(lon))
+          for(t2 in (t-9):t){
+            
+            # Abundance
+            ab_at_t0 = sum(imm_N_at_Len[,,2,s,t2] + mat_N_at_Len[,,2,s,t2])
+            ab_at_t = c(ab_at_t,ab_at_t0)
+            
+            ab_at_t0_mat = imm_N_at_Len[,,2,s,t2] + mat_N_at_Len[,,2,s,t2]
+            ab_at_t_mat = ab_at_t_mat + ab_at_t0_mat
+            
+            # Catch
+            catch_at_t0 = sum(total_spatial_catch_nb[,,2,s,t2])
+            catch_at_t = c(catch_at_t,catch_at_t0)
+            
+            catch_at_t0_mat = total_spatial_catch_nb[,,2,s,t2]
+            catch_at_t_mat = catch_at_t_mat + catch_at_t0_mat
+            
+          }
+          
+          n = ab_at_t[1]
+          n_mat = ab_at_t_mat / 9
+          
+          # Aggregated value
+          n_plus_1 = (n - c * exp(m/2)) / exp(m)  # Pope's approximation (see https://www.fao.org/3/x9026e/x9026e06.htm)
+          f = log(n / n_plus_1) - m
+          
+          # # Spatial value
+          # n_plus_1_mat = (n_mat - catch_at_t_mat * exp(m/2)) / exp(m)  # Pope's approximation (see https://www.fao.org/3/x9026e/x9026e06.htm)
+          # f = log(n_mat / n_plus_1_mat) - m
+          
+          n_at_size = c(n_at_size,n)
+          c_at_size = c(c_at_size,c)
+          f_at_size = c(f_at_size,f)
+          
+        }
+
+      }
+      
+      ## Implement HCR for next year quota
+      if(HCR == "cody"){
+        
+        f_mort = rep(0,length(sizes))
+        temp_imm = apply(imm_N_at_Len[,,2,,t],c(3),sum,na.rm=T)
+        temp_mat = apply(mat_N_at_Len[,,2,,t],c(3),sum,na.rm=T)
+        fish_sel_hcr = fish_sel[2,]
+        weight_at_size = wt_at_len[2,]
+        functional_mat = 0
+        mmb_def = 'morphometric'
+        
+        source("4_full_MSE/Management/hcr_cody.R")
+        
+      }
+      
       
     }
     
