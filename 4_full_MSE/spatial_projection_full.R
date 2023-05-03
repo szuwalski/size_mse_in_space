@@ -8,9 +8,14 @@ rm(list=ls())
 #==or start the model at the point that they are already only molting once a year
 #==and the size they enter the model change based on the temperature during the time period
 
+# Local declarations ----
+fsep <- .Platform$file.sep
+
 source("2_Max_spatial_projection/LHP_functions/libraries.R")
 
 library(gdistance)
+# remotes::install_github("James-Thorson/FishStatsUtils")
+# install.packages("INLA",repos=c(getOption("repos"),INLA="https://inla.r-inla-download.org/R/stable"), dep=TRUE)
 library(FishStatsUtils)
 library(maps)
 library(maptools)
@@ -20,6 +25,8 @@ library(reshape2)
 library(sf)
 library(tidyverse)
 library(TMB)
+library(gmr)
+
 
 world_sf <- ne_countries(scale = "medium", returnclass = "sf")
 
@@ -78,16 +85,16 @@ clim_sc =c("rcp45") # climate scenario to test
 
 ## Projection period
 #-------------------
+Start_Y <- 2022
 year_n	 <- 10
 year_step <- 12
 proj_period	<- seq(1,year_step*year_n)
-Years_climsc <- rep(2022:(2022+year_n), each=year_step)
+Years_climsc <- rep(Start_Y:(Start_Y+year_n), each=year_step)
 n_t <- length(proj_period)
-
 
 ## Size class settings
 #---------------------
-size_class_settings <- "rough"
+size_class_settings <- "fine"
 # either "fine" (5 cm per 5 cm like GMACS)
 # or "rough" (4 size classes accordingly to the IPM)
 # In spatial IPM, size classes are: 0 < size1 =<40 / 40 < size 2 =< 78 / 78<size3 =<101 / 101<size4
@@ -107,7 +114,7 @@ if(size_class_settings == "rough"){
 }
 
 
-## Sex and maturity
+## Sex and mortality
 #------------------
 sexN		 <-2
 imm_fem_M    <-0.32
@@ -131,13 +138,25 @@ if(size_class_settings == "fine"){
 #-------------
 #==Binary vectors related to period that determine when life events happen
 #==July,Aug,Sept,Oct,Nov,Dec,Jan,Feb,Mar,Apr,May,Jun
-survey_time   <-rep(c(1,0,0,0,0,0,0,0,0,0,0,0),year_n)
-fish_time		  <-rep(c(0,0,0,0,0,0,0,1,1,1,0,0),year_n)
-recruit_time	<-rep(c(0,0,0,0,0,0,0,0,0,1,0,0),year_n)
-move_time		  <-rep(c(1,1,1,1,1,1,1,1,1,1,1,1),year_n)
-molt_time  	  <-rbind(rep(c(0,0,0,0,0,0,0,0,0,1,0,0),year_n),rep(c(0,0,0,0,0,0,0,0,0,1,0,0),year_n)) # females first, males second
-mate_time 	  <-rep(c(0,0,0,0,0,0,0,1,0,1,0,0),year_n)
-SA_time       <-rep(c(0,0,0,0,0,0,0,0,0,1,0,0),year_n)
+
+# Easier to manage for GMACS ----
+survey_time_Yr   <-c(1,0,0,0,0,0,0,0,0,0,0,0)
+fish_time_Yr		 <-c(0,0,0,0,0,0,0,1,1,1,0,0)
+recruit_time_Yr	 <-c(0,0,0,0,0,0,0,0,0,1,0,0)
+move_time_Yr		 <-c(1,1,1,1,1,1,1,1,1,1,1,1)
+Fem_molt_time_Yr <- c(0,0,0,0,0,0,0,0,0,1,0,0)
+Mal_molt_time_Yr <- c(0,0,0,0,0,0,0,0,0,1,0,0)
+mate_time_Yr 	   <-c(0,0,0,0,0,0,0,1,0,1,0,0)
+SA_time_Yr       <-c(0,0,0,0,0,0,0,0,0,1,0,0)
+# ==========
+
+survey_time   <-rep(survey_time_Yr,year_n)
+fish_time		  <-rep(fish_time_Yr,year_n)
+recruit_time	<-rep(recruit_time_Yr,year_n)
+move_time		  <-rep(move_time_Yr,year_n)
+molt_time  	  <-rbind(rep(Fem_molt_time_Yr,year_n),rep(Mal_molt_time_Yr,year_n)) # females first, males second
+mate_time 	  <-rep(mate_time_Yr,year_n)
+SA_time       <-rep(SA_time_Yr,year_n)
 
 ## Survey data
 #-------------
@@ -192,10 +211,15 @@ homoMov <- FALSE
 
 ## Stock assessment
 #------------------
-SA <- "GMACS"
 # "spatialIPM": spatially-explicit model IPM
 # "nonspatialIPM": non spatial model IPM
 # "GMACS": standard stock assessment model
+SA <- "GMACS"
+
+# For GMACS
+# Name of the R script used to incorporate GMACS specifications
+Gmacs_Input_file <- "Input_GMACS_MSE"
+
 
 ## Spatial settings
 Data_Set <- 'Snow_crab'
@@ -392,19 +416,21 @@ terminal_molt<-1
 
 
 ## Molting probability
+
 if(size_class_settings == "fine") term_molt_prob<-c(0,0,0,.1,.2,.3,.4,.4,.4,.4,.4,.75,.9,1,1,1,1,1,1,1,1,1)
 if(size_class_settings == "rough") term_molt_prob<-c(0.01, 0.3,0.58,0.9)
 plot(term_molt_prob~sizes)
 
 
-## fishery pars
-#--------------
-fish_50<-95
-fish_95<-101
-fish_sel<-1/(1+exp(-log(19)*(sizes-fish_50)/(fish_95-fish_50)))
 
 ## weight at length parameters
 #-----------------------------
+
+# One sex 
+weight_a_u<-0.001
+weight_b_u<-3
+
+
 weight_a_f<-0.001
 weight_b_f<-3
 
@@ -420,6 +446,13 @@ move_len_95<-70
 
 ## Fishery selectivity
 #---------------------
+
+## fishery pars
+#--------------
+fish_50<-95
+fish_95<-101
+fish_sel<-1/(1+exp(-log(19)*(sizes-fish_50)/(fish_95-fish_50)))
+
 fish_sel_50_f<-NA
 fish_sel_95_f<-NA
 fish_sel_50_m<-99
@@ -499,6 +532,14 @@ quota<-rep(10000000,fishers)
 fishing_process="stochastic"
 # fishing_process="max_benefit_min_dist"
 
+#================================================
+# Write GMACS input files if needed
+#=============================================
+if(SA == "GMACS"){
+  source(file = file.path(here::here(), "5_GMACS", "functions", 
+                          "write_GMACS_files.R"))
+}
+
 #=============================================
 # PROJJEEEECCCT
 #============================================
@@ -520,6 +561,8 @@ all_chosen_patch_full = list()
 list_info = data.frame(it = 0,
                        cost_travel = 0)
 
+use_harv <- 1
+
 for(cost_travel in 1000){ # c(0,1000,1000*2)
   
   total_spatial_catch<-array(0,dim=c(length(lat),length(lon),sexN,length(sizes),length(proj_period)))
@@ -530,8 +573,10 @@ for(cost_travel in 1000){ # c(0,1000,1000*2)
   all_chosen_patch=array(0,dim=c(2,length(proj_period),fishers))
   
   #==indices: lat,lon,sex,size,time
-  for(t in 1:(length(proj_period)-1))
-    #for(t in 1:320)
+  # for(t in 1:(length(proj_period)-1))
+  
+  for(t in 1:24)
+  # for (t in 1:9)
   {
     print(t)
     #==create a 'working' array for a given time step of both mature and immature critters
@@ -769,10 +814,10 @@ for(cost_travel in 1000){ # c(0,1000,1000*2)
             {
               #==this is where Max's maps could be implemented
               #==plug temp into growth curve
-              f_postmolt_imm<-alpha_grow_f_imm + beta_grow_f_imm*sizes
-              m_postmolt_imm<-alpha_grow_m_imm + beta_grow_m_imm*sizes
-              f_postmolt_mat<-alpha_grow_f_mat + beta_grow_f_mat*sizes
-              m_postmolt_mat<-alpha_grow_m_mat + beta_grow_m_mat*sizes
+              f_postmolt_imm<-sizes + (alpha_grow_f_imm + beta_grow_f_imm*sizes)
+              m_postmolt_imm<-sizes + (alpha_grow_m_imm + beta_grow_m_imm*sizes)
+              f_postmolt_mat<-sizes + (alpha_grow_f_mat + beta_grow_f_mat*sizes)
+              m_postmolt_mat<-sizes + (alpha_grow_m_mat + beta_grow_m_mat*sizes)
               
               #======================================
               #==make size transition matrix immature
@@ -800,8 +845,10 @@ for(cost_travel in 1000){ # c(0,1000,1000*2)
               if(molt_time[1,t]==1)
               {
                 tmp_molt          <-temp_imm_N[x,y,1,]%*%size_transition_mat_f_imm
-                temp_imm_N[x,y,1,]<-tmp_molt*term_molt_prob
-                temp_mat_N[x,y,1,]<-temp_mat_N[x,y,1,] + (1-term_molt_prob)*tmp_molt
+                # temp_imm_N[x,y,1,]<-tmp_molt*term_molt_prob
+                # temp_mat_N[x,y,1,]<-temp_mat_N[x,y,1,] + (1-term_molt_prob)*tmp_molt
+                temp_imm_N[x,y,1,]<-tmp_molt*(1-term_molt_prob)
+                temp_mat_N[x,y,1,]<-temp_mat_N[x,y,1,] + term_molt_prob*tmp_molt
                 
               }
               if(molt_time[2,t]==1)
@@ -1001,7 +1048,9 @@ for(cost_travel in 1000){ # c(0,1000,1000*2)
       
     }
     
+    #========================== 
     #==Stock assessment
+    #========================== 
     # "spatialIPM": spatially-explicit model IPM
     # "nonspatialIPM": non spatial model IPM
     # "GMACS": standard stock assessment model
@@ -1069,13 +1118,16 @@ for(cost_travel in 1000){ # c(0,1000,1000*2)
         
         # source(paste0(project_spatialIPM,"03_spatial_model/run_model_mse.R"))
         
-      }
-      
-      if(SA == "nonspatialIPM"){
+      } else if(SA == "nonspatialIPM"){
         
-      }
-      
-      if(SA == "GMACS"){
+      } else if(SA == "GMACS"){
+        # Update data and control files
+        source(file = file.path(dir_GMACS,
+                                "functions", "Update_GMACS_file.R", fsep = fsep))
+        source(file = file.path(dir_GMACS,
+                                "functions", "Run_Gmacs.R", fsep = fsep))
+        # Now run GMACS
+        runGMACS()
         
       }
       
