@@ -24,8 +24,9 @@ recruit_fem_mat = exp(logrecruit_fem_mat) * init_juv
 # --> Imply that temperature affect recruitment at the cell level
 
 # Aggregate to model stochasticity
-meanlog_recruit_male_2 = sum(recruit_male_mat)
-meanlog_recruit_female_2 = sum(recruit_fem_mat)
+meanlog_recruit_male_2 = log(sum(recruit_male_mat))
+meanlog_recruit_female_2 = log(sum(recruit_fem_mat))
 # Modeling recruitment at aggregated level is equivalent to assume 
 # that this random noise accounts for all the processes unmodelled 
 # that impact the recruitment from spawning to settlement and being recruited
+
