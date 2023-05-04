@@ -5,11 +5,6 @@ library(tidyverse)
 
 #==== read in model outputs
 load(file="4_full_MSE/data/fit_mnl_fleet_only_r_none.rda")
-load(file="R/model/output/model_mnl_fleet_only_r_none.rda")
-load(file="R/model/output/report_mnl_fleet_only_r_none.rda")
-load(file="R/model/output/sd_error_fleet_only_r_none.rda")
-load(file="R/model/output/pars_mnl_fleet_only_r_none.rda")
-pars = model_full_fleet$env$last.par.best 
 
 #==== read in the data
 the_d = read.csv("4_full_MSE/data/cpue_alt_covariate_prewide_2023_0329.csv")
@@ -36,9 +31,9 @@ N_area = length(area_id)
 #==== Get average of non-effort interacting covariates per stat_area (Sort, Port, Ice)
 #== Ice
 # how much fishing occurs each month?
-the_d %>% group_by(month) %>%
-  summarise(effort=sum(effort,na.rm = T)) %>%
-  mutate(prop_eff = effort/sum(effort))
+# the_d %>% group_by(month) %>%
+#   summarise(effort=sum(effort,na.rm = T)) %>%
+#   mutate(prop_eff = effort/sum(effort))
 # focus only on months 1,2,and 3
 
 ice_area_grid <- read.csv("4_full_MSE/data/weekly_ice_area_per_grid_cell.csv")%>% select(-X)
