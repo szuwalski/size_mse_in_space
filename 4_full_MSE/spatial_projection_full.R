@@ -1,31 +1,11 @@
+###################################################
+## spatial MSE loop for Snow Crab of the Bering Sea
+###################################################
+## B. Alglave and C. Szuwalski
 rm(list=ls())
-#==what is the first size class to be modeled?
-#==this depend on how size at maturity changes
-#==do crab mature after a set number of molts?
-#==do they molt no matter what, just different increments?
-#==OR do they molt the same size increment, but fewer times?
-#==size dependent molting?
-#==or start the model at the point that they are already only molting once a year
-#==and the size they enter the model change based on the temperature during the time period
 
+## Load packages
 source("2_Max_spatial_projection/LHP_functions/libraries.R")
-
-library(gdistance)
-library(FishStatsUtils)
-library(maps)
-library(maptools)
-library(plot.matrix)
-library(raster)
-library(rnaturalearth)
-library(reshape2)
-library(sf)
-library(spdep)
-library(stars)
-library(tidyverse)
-library(TMB)
-
-world_sf <- ne_countries(scale = "medium", returnclass = "sf")
-
 print_messages <- F
 
 # Paths
@@ -35,128 +15,15 @@ if(!dir.exists(DateFile)) dir.create(DateFile)
 
 ## Spatial extent
 #----------------
-lat		   <-seq(70,51.5,length.out=40)
-lon		   <-seq(-179,-155,length.out=40)
-sp_domain = "EBS"
+source("4_full_MSE/source/spatial_extent.r")
 
-source("2_Max_spatial_projection/LHP_functions/spatial_grid.R")
-spatial_grid <- spatial_grid(lon,lat)
-attach(spatial_grid)
-
-# designate areas of potential habitat (i.e. not land)
-data(wrld_simpl)
-point_expand <- expand.grid(lon, lat)
-point_expand$key = 1:nrow(point_expand)
-# plot(point_expand[,1],point_expand[,2])
-# text(point_expand[,1],point_expand[,2],labels = 1:nrow(point_expand))
-pts <- SpatialPoints(point_expand, proj4string=CRS(proj4string(wrld_simpl)))
-proj4string(wrld_simpl)<-CRS(proj4string(pts))
-## Find which points fall over land
-land <- !is.na(over(pts, wrld_simpl)$FIPS)
-
-# Compute cell area
-test = rasterFromXYZ(cbind(point_expand,rep(rnorm(nrow(point_expand)),nrow(point_expand))), crs=CRS(proj4string(wrld_simpl)), digits=5)
-cell_area = raster::area(test) %>% as.matrix()
-
-## EBS area
-load("4_full_MSE/data/EBS.RData")
-xys = st_as_sf(as.data.frame(Extrapolation_List$Data_Extrap), coords=c("Lon","Lat"),crs=CRS(proj4string(wrld_simpl)))
-EBS_sf = xys %>% 
-  group_by() %>% 
-  summarise(Include = sum(Include)) %>% 
-  st_cast("MULTIPOINT") %>% 
-  st_cast("MULTILINESTRING") %>% 
-  st_cast("MULTIPOLYGON")
-
-EBS_sf = st_convex_hull(EBS_sf)
-# plot(EBS_sf)
-EBS_sp = as_Spatial(EBS_sf)
-EBS_mask = is.na(over(pts, EBS_sp)$Include)
-
-# ## Check
-plot(wrld_simpl,xlim = c(min(lon), max(lon)), ylim = c(min(lat),max(lat)))
-points(pts, col=1+land, pch=16)
-
-## Climate scenarios 
+## Projection setting
 #-------------------
-clim_sc = c("rcp45") # climate scenario to test
+source("4_full_MSE/source/proj_param.r")
 
-## Projection period
-#-------------------
-year_n	 <- 50
-year_step <- 12
-proj_period	<- seq(1,year_step*year_n)
-Years_climsc <- rep(2022:(2022+year_n), each=year_step)
-n_t <- length(proj_period)
-
-## Load GMACS outputs for parameterizing
-#---------------------------------------
-load(file = "4_full_MSE/data/Snow_GMACS_repfile.Rdata")
-
-## Size class settings
-#---------------------
-size_class_settings <- "fine"
-# either "fine" (5 cm per 5 cm like GMACS)
-# or "rough" (4 size classes accordingly to the IPM)
-# In spatial IPM, size classes are: 0 < size1 =<40 / 40 < size 2 =< 78 / 78<size3 =<101 / 101<size4
-
-# Original settings
-if(size_class_settings == "fine"){
-  binsize  <- 5
-  sizes		 <-seq(27.5,132.5,binsize)
-  binclass <- c(sizes - binsize / 2, sizes[length(sizes)] + binsize / 2)
-  n_p <- as.numeric(length(sizes))
-}
-
-if(size_class_settings == "rough"){
-  binclass <- c(0,40,78,101,132.5)
-  sizes		 <- (binclass[1:(length(binclass) - 1)] + binclass[2:length(binclass)]) / 2
-  n_p <- as.numeric(length(sizes))
-}
-
-ad_size = 45 # size at which crabs are considered mature
-
-## Sex and maturity
-#------------------
-sexN = 2
-
-imm_fem_M = 0.32
-imm_male_M = 0.32
-mat_fem_M = 0.26
-mat_male_M = 0.28
-
-morta_sd_imm = 0.1
-morta_sd_mat = 0.1
-
-morta_model = "cody_model"
-if(morta_model == "max_model"){
-  
-  #==Maxime's morta parameterization
-  ## Load morta settings for spatially varying parameters
-  G_spatial <- F
-  Morta_spatial <- F # are life history parameters spatial?
-  source("4_full_MSE/LHP/morta_settings.R")
-  
-  ## Load function for morta
-  source("4_full_MSE/LHP/morta.R")
-  
-}
-
-
-## Recruitment
-#-------------
-rec_sizes    <-5
-prop_rec     <-c(.25,.4,.25,.075,0.025)
-
-if(size_class_settings == "rough"){
-  rec_sizes    <-1
-  prop_rec     <-1
-}
-
-if(size_class_settings == "fine"){
-  rec_sizes    <-5
-  prop_rec     <-c(.25,.4,.25,.075,0.025)
-}
+## Demographic settings
+#-----------------------
+source("4_full_MSE/source/demographic_param.r")
 
 ## Seasonality
 #-------------
@@ -171,55 +38,15 @@ mate_time 	  <-rep(c(0,0,0,0,0,0,0,1,0,1,0,0),year_n)
 SA_time       <-rep(c(0,0,0,0,0,0,0,0,0,1,0,0),year_n)
 january_month <-rep(c(1,0,0,0,0,0,0,0,0,0,0,0),year_n)
 
-## Survey data
-#-------------
-## Load survey data for sampling locations
-load('4_full_MSE/data/Data_Geostat_4class.RData')
+## Survey and commercial catch data
+#----------------------------------
+source("4_full_MSE/source/survey_commercial_data.r")
 
-DF <- as_tibble(Data_Geostat)
 
-Data_Geostat = cbind(
-  "size_class" = DF[, "size_bin"],
-  "year" = DF[, "Year"],
-  "Catch_N" = DF[, "Catch"],
-  "AreaSwept_km2" = DF[, "AreaSwept_km2"],
-  "Vessel" = 0,
-  "Lat" = DF[, "Lat"],
-  "Lon" = DF[, "Lon"]
-)
+## Load GMACS outputs for parameterizing
+#---------------------------------------
+load(file = "4_full_MSE/data/Snow_GMACS_repfile.Rdata")
 
-colnames(Data_Geostat) <-
-  c("size_class",
-    "year",
-    "Catch_N",
-    "AreaSwept_km2",
-    "Vessel",
-    "Lat",
-    "Lon")
-
-Data_Geostat = Data_Geostat %>%
-  filter(year %in% 2015:2016)
-
-## Catch data
-#------------
-load(paste0(project_spatialIPM,"02_transformed_data/movement/COG/COG_smoother_ADFG/catch_fishery_mov_intersect.RData"))
-catch_N <- catch_fishery_mov_intersect
-
-# Choose if we implement fisheries catches (Fisheries_catches <-TRUE) or not in the model 
-Fisheries_catches <-TRUE
-mov <- FALSE
-
-# Choose if we implement simulated fisheries catches(Catches_sim_random <-TRUE) ro not in the model 
-Catches_sim_random <- FALSE
-Catches_sim_fractionAb <- FALSE
-
-heterMov <- FALSE
-homoMov <- FALSE
-
-# Smoother
-#smoother <- TRUE # smoother is with knots
-#ADFG <- TRUE # smoother is with ADFG cells
-#KNOT_i <- FALSE
 
 
 ## Stock assessment
