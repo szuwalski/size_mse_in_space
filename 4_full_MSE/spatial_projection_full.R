@@ -5,24 +5,28 @@
 rm(list=ls())
 
 ## Load packages and make paths
+#------------------------------
 source("2_Max_spatial_projection/LHP_functions/libraries.R")
 print_messages <- F
 
-#----------------------------------------------------------------------------------------------
-#--------------------------------------- Parameterization -------------------------------------
-#----------------------------------------------------------------------------------------------
+## Load required data for parameterzing and doing projection (GMACS, climatic projections)
+#-----------------------------------------------------------------------------------------
+load("4_full_MSE/data/Snow_GMACS_repfile.Rdata") # Outputs provided by Mathieu from GMACS
+load("4_full_MSE/data/Abundance_Recruitment_Assessment.Rdata")
+load("4_full_MSE/data/NRS_vars_wide_op.Rdata") # Environmental covariates --> all variables
+load("2_Max_spatial_projection/Climate_scenarios/mn_var_all.Rdata") # --> bottom temperature
+
+#--------------------------------------------------------------------------------------
+#--------------------------------------- Settings -------------------------------------
+#--------------------------------------------------------------------------------------
 
 ## Spatial extent
 #----------------
-source("4_full_MSE/source/spatial_extent.r")
+source("4_full_MSE/source/settings/spatial_extent.r")
 
-## Projection setting
+## Climate projection
 #--------------------
-source("4_full_MSE/source/proj_param.r")
-
-## Demographic settings
-#----------------------
-source("4_full_MSE/source/demographic_param.r")
+source("4_full_MSE/source/settings/proj_param.r")
 
 ## Seasonality
 #-------------
@@ -32,568 +36,53 @@ survey_time   <-rep(c(1,0,0,0,0,0,0,0,0,0,0,0),year_n)
 fish_time		  <-rep(c(0,0,0,0,0,0,0,1,1,1,0,0),year_n)
 recruit_time	<-rep(c(0,0,0,0,0,0,0,0,0,1,0,0),year_n)
 move_time		  <-rep(c(1,1,1,1,1,1,1,1,1,1,1,1),year_n)
-molt_time  	  <-rbind(rep(c(0,0,0,0,0,0,0,0,0,1,0,0),year_n),rep(c(0,0,0,0,0,0,0,0,0,1,0,0),year_n)) # females first, males second
+molt_time  	  <-rbind(rep(c(0,0,0,0,0,0,0,0,0,1,0,0),year_n),
+                      rep(c(0,0,0,0,0,0,0,0,0,1,0,0),year_n)) # females first, males second
 mate_time 	  <-rep(c(0,0,0,0,0,0,0,1,0,1,0,0),year_n)
 SA_time       <-rep(c(0,0,0,0,0,0,0,0,0,1,0,0),year_n)
 january_month <-rep(c(1,0,0,0,0,0,0,0,0,0,0,0),year_n)
 
-## Survey and commercial catch data
-#----------------------------------
-source("4_full_MSE/source/survey_commercial_data.r")
+## Demographic settings
+#----------------------
+source("4_full_MSE/source/settings/demographic_param.r")
 
-## Load GMACS outputs for parameterizing
-#---------------------------------------
-load(file = "4_full_MSE/data/Snow_GMACS_repfile.Rdata")
+## Fishery settings
+#------------------
+source("4_full_MSE/source/settings/fishery_param.R")
 
 ## Stock assessment
 #------------------
-source("4_full_MSE/source/stock_assessment.R")
+source("4_full_MSE/source/settings/stock_assessment.R")
 
-## Matrices of abundance at size
-#-------------------------------
-## need to track numbers at size by sex by maturity by location
-imm_N_at_Len<-array(dim=c(length(lat),length(lon),sexN,length(sizes),length(proj_period)))
-mat_N_at_Len<-array(dim=c(length(lat),length(lon),sexN,length(sizes),length(proj_period)))
-
-load(file="1_OM_Cody_version0/smooth_mat_N_at_Len_2017.RData") # smooth_mat
-load(file="1_OM_Cody_version0/smooth_imm_N_at_Len_2017.RData") # smooth_imm
-
-## Initialization data
-ebs_2019 <- read_csv("4_full_MSE/data/ebs_2019.csv")
-nbs_2019 <- read_csv("4_full_MSE/data/nbs_2019.csv")
-
-ebs_2019_2 = ebs_2019 %>% 
-  mutate(area = "ebs") %>% 
-  mutate(stage = ifelse(WIDTH < 45,"Juv",'Mat')) %>% 
-  dplyr::group_by(HAUL,MID_LATITUDE,MID_LONGITUDE,stage,area) %>% 
-  tally()
-
-nbs_2019_2 = nbs_2019 %>% 
-  mutate(area = "nbs") %>% 
-  mutate(stage = ifelse(WIDTH < 45,"Juv",'Mat')) %>% 
-  dplyr::group_by(HAUL,MID_LATITUDE,MID_LONGITUDE,stage,area) %>% 
-  tally()
-
-count_df = rbind(ebs_2019_2,nbs_2019_2)
-
-lat_range = range(count_df$MID_LATITUDE)
-lon_range = range(count_df$MID_LONGITUDE)
-
-Juv_plot = ggplot(count_df[which(count_df$stage == "Juv"),])+
-  geom_point(aes(x=MID_LONGITUDE,y=MID_LATITUDE,col=log(n)),size = 2)+
-  scale_color_distiller(palette = "Spectral")+
-  ggtitle("Juveniles")+
-  xlim(lon_range)+ylim(lat_range) # + facet_wrap(.~area)
-
-Mat_plot = ggplot(count_df[which(count_df$stage == "Mat"),])+
-  geom_point(aes(x=MID_LONGITUDE,y=MID_LATITUDE,col=log(n)),size = 2)+
-  scale_color_distiller(palette = "Spectral")+
-  ggtitle("Mature")+
-  xlim(lon_range)+ylim(lat_range) # + facet_wrap(.~area)
-
-point_sf = st_as_sf(point_expand,coords = c("Var1","Var2"))
-raster_dom = st_rasterize(point_sf %>% dplyr::select(key, geometry))
-grid_sf = st_as_sf(raster_dom)
-
-count_sf = st_as_sf(count_df,coords = c("MID_LONGITUDE","MID_LATITUDE"))
-test = st_intersection(grid_sf,count_sf) %>%
-  as.data.frame %>% 
-  group_by(key,stage) %>%
-  dplyr::summarise(n = mean(n)) %>% 
-  full_join(grid_sf) %>%
-  filter(!is.na(n)) %>% 
-  filter(!is.na(stage)) %>% 
-  st_as_sf
-
-ggplot()+
-  geom_sf(data=test,aes(fill=n))+
-  scale_fill_distiller(palette="Spectral")+
-  facet_wrap(.~stage)
-
-init_adult<-array(0,dim=c(length(lat),length(lon)))
-init_juv<-array(0,dim=c(length(lat),length(lon)))
-
-for(x in 1:length(lat))
-  for(y in 1:length(lon))
-  {
-    
-    key = point_expand$key[which(point_expand$Var1 == lon[y] & point_expand$Var2 == lat[x])]
-    test_mat = test$n[test$key == key & test$stage == "Mat"]
-    test_immat = test$n[test$key == key & test$stage == "Juv"]
-    if(length(test_mat) > 0) init_adult[x,y] = test$n[test$key == key & test$stage == "Mat"]
-    if(length(test_immat) > 0) init_juv[x,y] = test$n[test$key == key & test$stage == "Juv"]
-
-  }
-
-init_adult = init_adult / sum(init_adult)
-init_juv = init_juv / sum(init_juv)
-
-# cowplot::plot_grid(Juv_plot,Mat_plot)
-
-land_mask_na = land_mask
-land_mask_na[which(land_mask == 0)] = NA
-par(mfrow=c(1,2))
-plot(init_juv * land_mask_na, main = "", asp = 1)
-plot(init_adult * land_mask_na, main = "", asp = 1)
-
-if(size_class_settings=="fine"){
-  imm_N_at_Len[,,,,1]<-array(0,dim = c(length(lat),length(lon),2,length(sizes)))
-  mat_N_at_Len[,,,,1]<-array(0,dim = c(length(lat),length(lon),2,length(sizes)))
-}
-
-if(size_class_settings=="rough"){
-  
-  for(i in 1:4){
-    
-    # imm_N_at_Len[,,1,i,1] <- exp(smooth_imm)[,,1,i] # matrix(rnorm(n = length(lat) * length(lon),mean = 1,sd = 1),nrow = length(lat), ncol = length(lon))
-    # imm_N_at_Len[,,2,i,1] <- exp(smooth_imm)[,,2,i] # matrix(rnorm(n = length(lat) * length(lon),mean = 1,sd = 1),nrow = length(lat), ncol = length(lon))
-    # mat_N_at_Len[,,1,i,1] <- exp(smooth_mat)[,,1,i] # matrix(rnorm(n = length(lat) * length(lon),mean = 1,sd = 1),nrow = length(lat), ncol = length(lon))
-    # mat_N_at_Len[,,2,i,1] <- exp(smooth_mat)[,,2,i] # matrix(rnorm(n = length(lat) * length(lon),mean = 1,sd = 1),nrow = length(lat), ncol = length(lon))
-
-    model <- RMexp(scale = 20,var = 1e10)
-    imm_N_at_Len[,,1,i,1] <- (as.matrix(RFsimulate(model, lon, rev(lat), grid=TRUE)))
-    imm_N_at_Len[,,2,i,1] <- (as.matrix(RFsimulate(model, lon, rev(lat), grid=TRUE)))
-    mat_N_at_Len[,,1,i,1] <- (as.matrix(RFsimulate(model, lon, rev(lat), grid=TRUE)))
-    mat_N_at_Len[,,2,i,1] <- (as.matrix(RFsimulate(model, lon, rev(lat), grid=TRUE)))
-
-  }
-  
-}
-
-imm_N_at_Len[imm_N_at_Len=="NaN"]<-0
-mat_N_at_Len[mat_N_at_Len=="NaN"]<-0
-
-imm_N_at_Len[imm_N_at_Len<0]<-0
-mat_N_at_Len[mat_N_at_Len<0]<-0
-
-
-## Abundance
-load("4_full_MSE/data/Abundance_Recruitment_Assessment.Rdata") # Outputs provided by Mathieu from GMACS
-init_year = 37 # Time series: 1982-2022
-Ab_males = unlist(Snow_Out$Abundance$N_males[init_year,])
-Ab_males_mat = unlist(Snow_Out$Abundance$N_males_mature[init_year,])
-Ab_females = unlist(Snow_Out$Abundance$N_females[init_year,])
-Ab_females_mat = unlist(Snow_Out$Abundance$N_females_mature[init_year,])
-
-#==This makes up a random distribution for the population
-#==only used for testing
-fake_dist_data<-1
-if(fake_dist_data==1)
-{
-  #==set dummy initial distribution--take this from the survey for real
-  #==this is only for getting mechanics down
-  imm_N_at_Len[,,1,1,1]<-init_juv * (Ab_females[1] - Ab_females_mat[1])
-  imm_N_at_Len[,,2,1,1]<-init_juv * (Ab_males[1] - Ab_males_mat[1])
-  mat_N_at_Len[,,1,1,1]<-init_juv * Ab_females_mat[1]
-  mat_N_at_Len[,,2,1,1]<-init_juv * Ab_males_mat[1]
-  
-  for(x in 2:length(sizes))
-  {
-    
-    if(sizes[x] < ad_size){
-      imm_N_at_Len[,,1,x,1]<-init_juv * (Ab_females[x] - Ab_females_mat[x])
-      imm_N_at_Len[,,2,x,1]<-init_juv * (Ab_males[x] - Ab_males_mat[x])
-      mat_N_at_Len[,,1,x,1]<-init_juv * Ab_females_mat[x]
-      mat_N_at_Len[,,2,x,1]<-init_juv * Ab_males_mat[x]
-    }else if(sizes[x] > 45){
-      imm_N_at_Len[,,1,x,1]<-init_adult * (Ab_females[x] - Ab_females_mat[x])
-      imm_N_at_Len[,,2,x,1]<-init_adult * (Ab_males[x] - Ab_males_mat[x])
-      mat_N_at_Len[,,1,x,1]<-init_adult * Ab_females_mat[x]
-      mat_N_at_Len[,,2,x,1]<-init_adult * Ab_males_mat[x]
-    }
-    
-  }
-  
-}
-
-#==delete critters where there is land (this will be used for movement as well)
-
-if(size_class_settings == "rough") area_mask = "EBS_only"
-
-land_mask<-matrix(1,ncol=length(lon),nrow=length(lat),byrow=T)
-land_matrix = t(matrix(land,ncol=length(lon),nrow=length(lat)))
-EBS_mask_matrix = t(matrix(EBS_mask,ncol=length(lon),nrow=length(lat)))
-EBS_mask_matrix[which(EBS_mask_matrix == T)] = 1
-EBS_mask_matrix[which(EBS_mask_matrix == F)] = 0
-
-# plot(t(land_matrix))
-# plot(t(EBS_mask_matrix))
-for(x in 1:length(lat))
-  for(y in 1:length(lon))
-  {
-    
-    if(land_matrix[x,y] == 1){
-      land_mask[x,y]<-0
-    }
-    
-  }
-
-#==ugh. this is dumb, but how to automate?
-g<-function(m) t(m)[,nrow(m):1]
-
-land_mask[25:40,20:40]
-land_mask[31,32]<-0
-land_mask[32,29]<-0
-# filled.contour(land_mask)
-
-# filled.contour(x=lon,y=rev(lat),g(imm_N_at_Len[,,1,1,1]))
-#write.csv(land_mask,'landmask.csv')
-
-#==ensures no critters on land
-for(x in 1:2)
-  for(y in 1:length(sizes))
-  {
-    imm_N_at_Len[,,x,y,1]<- imm_N_at_Len[,,x,y,1]*land_mask
-    mat_N_at_Len[,,x,y,1]<- imm_N_at_Len[,,x,y,1]*land_mask
-  }
-
-#==SHOULD THERE ALSO BE A 'DEPTH MASK'???
-#==MAYBE A 'FISHERY MASK'??  Depth should limit the fishery.
-# filled.contour(x=lon,y=rev(lat),g(imm_N_at_Len[,,1,1,1]))
-
-#==create a file with bottom temperature for all time periods
-avg_bot_tmp<-rep(c(1,2,3,3,3,2,1,0,0,0,0,1),year_n)
-for(x in 1:length(proj_period))
-{
-  temp<-land_mask*rnorm(length(land_mask),avg_bot_tmp[x],.5)
-  #write.csv(temp,paste("temp_data/bot_temp_",x,".csv",sep=""),row.names=FALSE)
-}
-
-
-#==========================
-# Population processes 
-#==========================
-## Growth
-#--------
-# Parameterize with GMACS
-growth_transition <- repfile$growth_matrix
-growth_param <- repfile$Growth_param %>% 
-  dplyr::mutate(model = "")
-
-growth_param[1:6,] <- growth_param[1:6,] %>% 
-  dplyr::mutate(Parameter = c(paste("Male", c("alpha", "beta", "scale"), sep = "_"),
-                              paste("Female", c("alpha", "beta", "scale"), sep = "_")))  %>% 
-  dplyr::mutate(model = "Increment")
-
-growth_param[7:dim(growth_param)[1],] <- growth_param[7:dim(growth_param)[1],] %>% 
-  dplyr::mutate(Parameter = c(paste(rep(c("Male_SC", "female_SC"), each = length(repfile$mid_points)),
-                                    rep(1:length(repfile$mid_points), 2), sep="_")))  %>% 
-  dplyr::mutate(model = "molt prob")
-
-# Type of model
-growth_model <- "cody_model" # "max_model" "cody_model"
-# Cody's model --> non-spatial life-history parameters
-# Maxime's model --> spatially varying life-history parameters
-
-growth_param_est = growth_param[1:6,] %>% 
-  dplyr::select(Estimate) %>% 
-  unlist
-
-#==Cody's growth parameterization for generation of non spatially varying growth parameters
-#==GMACS outputs
-alpha_grow_f_imm <- growth_param_est[4]
-alpha_grow_m_imm <- growth_param_est[1]
-beta_grow_f_imm <- - growth_param_est[5]
-beta_grow_m_imm <- - growth_param_est[2]
-
-alpha_grow_f_mat <- growth_param_est[4]
-alpha_grow_m_mat <- growth_param_est[1]
-beta_grow_f_mat <- - growth_param_est[5]
-beta_grow_m_mat <- - growth_param_est[2]
-
-scale_f_imm = 1 # growth_param_est[6]
-scale_f_mat = 1 # growth_param_est[6]
-scale_m_imm = 1 # growth_param_est[3]
-scale_m_mat = 1 # growth_param_est[3]
-
-growth_sd_imm<-c(5,4) # Where to find better values?
-growth_sd_mat<-c(5,4)
-
-#==plug temp into growth curve
-f_postmolt_imm<-sizes + (alpha_grow_f_imm + beta_grow_f_imm*sizes)/scale_f_imm
-m_postmolt_imm<-sizes + (alpha_grow_m_imm + beta_grow_m_imm*sizes)/scale_m_imm
-f_postmolt_mat<-sizes + (alpha_grow_f_mat + beta_grow_f_mat*sizes)/scale_f_mat
-m_postmolt_mat<-sizes + (alpha_grow_m_mat + beta_grow_m_mat*sizes)/scale_m_mat
-
-if(growth_model == "max_model"){
-  
-  #==Maxime's growth parameterization
-  ## Load growth settings for spatially varying parameters
-  G_spatial <- F 
-  Growth_spatial <- F # are life history parameters spatial?
-  source("4_full_MSE/LHP/growth_settings.R")
-  
-  ## Load function for growth
-  source("2_Max_spatial_projection/LHP_functions/growth.R")
-  
-  ## Dimensions note in the same order as Cody's codes --> fix?
-  growth_m_imm <- array(0,dim=c(n_t,length(lon),length(lat),n_p,n_p))
-  growth_m_mat <- array(0,dim=c(n_t,length(lon),length(lat),n_p,n_p))
-  growth_f_imm <- array(0,dim=c(n_t,length(lon),length(lat),n_p,n_p))
-  growth_f_mat <- array(0,dim=c(n_t,length(lon),length(lat),n_p,n_p))
-  
-}
-
-terminal_molt<-1
-
-## Molting probability
-if(size_class_settings == "fine") term_molt_prob<-c(0,0,0,.1,.2,.3,.4,.4,.4,.4,.4,.75,.9,1,1,1,1,1,1,1,1,1)
-if(size_class_settings == "rough") term_molt_prob<-c(0.01, 0.3,0.58,0.9)
-plot(term_molt_prob~sizes)
-
-
-## Recruitment
-#-------------
-recruit_female = unlist(Snow_Out$Recruitment$recruits[1,])
-meanlog_recruit_female = mean(log(recruit_female))
-sdlog_female = sd(log(recruit_female))
-
-recruit_male = unlist(Snow_Out$Recruitment$recruits[2,])
-meanlog_recruit_male = mean(log(recruit_male))
-sdlog_male = sd(log(recruit_male))
-
-# Only mean recruitment is affected by growth
-sd_meanlog_recruit_female = recruit_female / 0.1
-sd_meanlog_recruit_male = recruit_male / 0.1
-
-recruit_model = "cody_model"
-if(recruit_model == "max_model"){
-  
-  #==Maxime's recruit parameterization
-  ## Load recruit settings for spatially varying parameters
-  G_spatial <- F 
-  Recruit_spatial <- F # are life history parameters spatial?
-  source("4_full_MSE/LHP/recruit_settings.R")
-  
-  ## Load function for recruitment
-  source("4_full_MSE/LHP/recruitment.R")
-  
-}
-
-## fishery pars
-#--------------
-fish_50<-95
-fish_95<-101
-fish_sel<-1/(1+exp(-log(19)*(sizes-fish_50)/(fish_95-fish_50)))
-
-## weight at length parameters
-#-----------------------------
-weight_a_f<-0.001
-weight_b_f<-3
-
-weight_a_m<-0.0012
-weight_b_m<-3  
-
-wt_at_len<-rbind(weight_a_f*sizes^weight_b_f,weight_a_m*sizes^weight_b_m)  
-
-
-## Movement
-#----------
-## Movement at size
-move_len_50<-60
-move_len_95<-70
-
-## Movement matrices
-#-------------------
-# --> might need to make different matrices for mature and immature
-compute_movement_matrix = F
-
-if(compute_movement_matrix){
-  
-  # Compute adjacency matrix
-  A_gg = dnearneigh(point_expand[,c("Var1","Var2")],d1=0.45,d2=0.65)
-  A_gg_mat = nb2mat(A_gg)
-  A_gg_mat[which(A_gg_mat > 0)] = 1
-  # plot(A_gg_mat[1:100,1:100])
-  
-  ## Diffusion
-  #-----------
-  # D * DeltaT / A
-  # with D: diffusion coefficient, here btwn 0.1 and 1.1 km(^2?) per day (Cf. Olmos et al. SM)
-  # DeltaT: time interval btwn time steps, 
-  # A: area of grid cells
-  # par(mfrow = c(3,2))
-  D = 0.5
-  DeltaT = (1/30) # convert day in month
-  A = mean(cell_area)
-  diffusion_coefficient = D * DeltaT / A
-  diffusion_coefficient = 2 ^ 2
-  diffusion_gg = A_gg_mat * diffusion_coefficient
-  diag(diffusion_gg) = -1 * colSums(diffusion_gg)
-  
-  # plot(diffusion_gg[1:100,1:100], breaks=20)
-  # hist(diffusion_gg)
-  
-  ## Taxis for juveniles
-  #---------------------
-  taxis_coef_juv = 10^2 # This value is set so that movement happen rapidly enough --> should be refined by some ecological considerations
-  preference_g_juv = (init_juv - mean(init_juv)) / sd(init_juv)
-  # plot(t(preference_g_juv), breaks=20)
-  preference_g_juv = as.vector(t(preference_g_juv))
-  # # check
-  # test = matrix(preference_g,nrow = 40,ncol = 40,byrow = T)
-  # plot(test)
-  
-  taxis_gg_juv = A_gg_mat *  taxis_coef_juv * DeltaT / A * exp(outer(preference_g_juv, preference_g_juv, "-") * DeltaT / sqrt(A))
-  diag(taxis_gg_juv) = -1 * colSums(taxis_gg_juv)
-  
-  # Total
-  mrate_gg_juv = taxis_gg_juv # + diffusion_gg
-  # plot(diffusion_gg[1:100,1:100],breaks=20)
-  if( any(mrate_gg_juv-diag(diag(mrate_gg_juv))<0) ) stop("`mrate_gg` must be a Metzler matrix. Consider changing parameterization")
-  mfraction_gg_juv = Matrix::expm(mrate_gg_juv)
-  # test = matrix(mfraction_gg_juv@x,nrow=mfraction_gg_juv@Dim[1],ncol=mfraction_gg_juv@Dim[2])
-  # plot(test[1:100,1:100])
-  stationary_g_juv = eigen(mfraction_gg_juv)$vectors[,1]
-  stationary_g_juv = stationary_g_juv / sum(stationary_g_juv)
-  # test = matrix(stationary_g_juv,nrow=40,ncol=40,byrow = T)
-  # x11();plot(test)
-
-  ## Taxis for adults
-  #------------------
-  taxis_coef_ad = 10^2 # This value is set so that movement happen rapidly enough --> should be refined by some ecological considerations
-  preference_g_ad = (init_adult - mean(init_adult)) / sd(init_adult)
-  preference_g_ad = as.vector(t(preference_g_ad))
-  # # Check
-  # test = matrix(preference_g,nrow = 40,ncol = 40,byrow = T)
-  # plot(test)
-  
-  taxis_gg_ad = A_gg_mat *  taxis_coef_ad * DeltaT / A * exp(outer(preference_g_ad, preference_g_ad, "-") * DeltaT / sqrt(A))
-  diag(taxis_gg_ad) = -1 * colSums(taxis_gg_ad)
-  
-  # Total
-  mrate_gg_ad = taxis_gg_ad # + diffusion_gg
-  if( any(mrate_gg_ad-diag(diag(mrate_gg_ad))<0) ) stop("`mrate_gg` must be a Metzler matrix. Consider changing parameterization")
-  
-  mfraction_gg_ad = Matrix::expm(mrate_gg_ad)
-  # test = matrix(mfraction_gg@x,nrow=mfraction_gg@Dim[1],ncol=mfraction_gg@Dim[2])
-  # plot(test[1:100,1:100])
-  
-  stationary_g_ad = eigen(mfraction_gg_ad)$vectors[,1]
-  stationary_g_ad = stationary_g_ad / sum(stationary_g_ad)
-  # test = matrix(stationary_g_ad,nrow=40,ncol=40,byrow = T)
-  # x11();plot(test)
-  
-}else{
-  
-  load("4_full_MSE/data/mfraction_gg_ad.RData")
-  load("4_full_MSE/data/mfraction_gg_juv.RData")
-  
-}
-
-## Fishery selectivity
+## Management settings
 #---------------------
-# Parameterize with GMACS
-selec_curve = repfile$selectivity$Start_Y %>% 
-  filter(fleet == 1) %>% 
-  dplyr::select_at(vars(starts_with("SizeC_")))
-
-fish_sel = selec_curve
-
-fish_sel_50_f<-NA
-fish_sel_95_f<-NA
-fish_sel_50_m<-50
-fish_sel_95_m<-101
-
-fish_sel<-rbind(1/(1+exp(-log(19)*(sizes-fish_sel_50_f)/(fish_sel_95_f-fish_sel_50_f))),
-                1/(1+exp(-log(19)*(sizes-fish_sel_50_m)/(fish_sel_95_m-fish_sel_50_m))))
-fish_sel[is.na(fish_sel)]<-0
-
-#==this function sets a dispersal kernel for every cell
-#==sd is 'one grid square'  
-#source("movArray.R")
-#  movement_dispersal<-movArray(SpaceR=length(lat),SpaceC=length(lon),sdx=1,sdy=1)        
-
-#=====================================================  
-#===CALCULATE COSTS TO A PATCH FROM THE PORT FOR COSTS  
-#=====================================================
-
-# dutch harbor
-port_lat<-  54
-port_lon<- -166.54
-
-cost<-raster(nrow=length(lat), ncol=length(lon), 
-             xmn=min(lon), xmx=max(lon), ymn=min(lat), ymx=max(lat), crs="+proj=utm")
-cost[]<-1
-for(x in 1:nrow(cost))
-  for(y in 1:ncol(cost))
-    if(land_mask[x,y]==0) cost[x,y]<-100000
-
-trCost <- transition(1/cost, min, directions=8)
-trCostC <- geoCorrection(trCost, type="c")
-trCostR <- geoCorrection(trCost, type="r")
-
-## Create three points (representing three points in time series)
-pnts <- cbind(x=c(port_lon, -155,-160), y=c(port_lat, 52,58))
-costDistance(trCostC,pnts)
-
-## Display results for one set of points
-plot(cost)
-plot(SpatialPoints(pnts), add=TRUE, pch=20, col="red")
-plot(shortestPath(trCostC, pnts[1,], pnts[2,], output="SpatialLines"), add=TRUE)
-plot(shortestPath(trCostC, pnts[1,], pnts[3,], output="SpatialLines"), add=TRUE)
-plot(shortestPath(trCostC, pnts[2,], pnts[3,], output="SpatialLines"), add=TRUE)
-
-#==find the distance from harbor to all points
-distance_map<-matrix(ncol=length(lon),nrow=length(lat))
-colnames(distance_map)<-lon
-rownames(distance_map)<-(lat)
-for(x in 1:length(lon))
-  for(y in 1:length(lat))
-  {
-    if(land_mask[y,x]!=0)
-    {
-      pts <- cbind(x=c(port_lon, as.numeric(colnames(distance_map)[x])), y=c(port_lat,  as.numeric(rownames(distance_map)[y])))
-      distance_map[y,x]<-costDistance(trCostC, pts[1,],pts[2,])
-      if(distance_map[y,x]>10000)distance_map[y,x]<-NA
-    }
-  }  
-# filled.contour(x=lon,y=rev(lat),g(distance_map*land_mask),plot.axes=c(map(add=TRUE,fill=T,col='grey'),
-#                                                                       points(y=port_lat,x=port_lon,pch=16,col='red')))
-# write.csv(distance_map,'dist.csv')
-
-
-#================================================
-# calculate costs to fish
-#=============================================
-#==this should be related to the amount of fish in a patch
-cost_fish <- 0
-
-cost_travel <- 0
-cost_patch <- cost_travel * distance_map + cost_fish
-price <- 1.5
-
-fishers<-30
-quota<-rep(1e7/fishers,fishers)
-
-fishing_process="stochastic"
-# fishing_process="max_benefit_min_dist"
-
-
-#================================================
-# Management
-#================================================
-HCR = "cody"
-
 source("4_full_MSE/Management/proj_to_fish.R")
 
 HCR = "cody"
-
 fmsy_proxy = 0.5
 bmsy_proxy = 183.1*1e9
 b_hcr = 2
 a_hcr = 0
 
-#=============================================
-# PROJJEEEECCCT
-#============================================
+## Matrices of abundance at size (initialization)
+#------------------------------------------------
+source("4_full_MSE/source/settings/ab_at_size.r")
+
+## Dataframe for survey and commercial catch data
+#------------------------------------------------
+# From Max codes so that these are in good format to fit IPM model
+source("4_full_MSE/source/settings/survey_commercial_data.r")
+
+#--------------------------------------------------------------------------------------
+#--------------------------------------- Project --------------------------------------
+#--------------------------------------------------------------------------------------
 list_it = 0
 
 # Abundance
 imm_N_at_Len_full = list()
 mat_N_at_Len_full = list()
 
-#  Exploitation
+# Exploitation
 total_spatial_catch_full = list()
 catch_by_fisher_full = list()
 profit_by_fisher_full = list()
@@ -621,17 +110,13 @@ for(cost_travel in 1000){ # c(0,1000,1000*2)
   all_chosen_patch=array(0,dim=c(2,length(proj_period),fishers))
   
   #==indices: lat,lon,sex,size,time
-  for(t in 1:(length(proj_period)-1))
-    #for(t in 1:320)
+  for(t in 1:(length(proj_period)-1))  
   {
+    
     print(t)
     #==create a 'working' array for a given time step of both mature and immature critters
-    
     temp_imm_N<-imm_N_at_Len[,,,,t]
     temp_mat_N<-mat_N_at_Len[,,,,t]
-    # filled.contour(x=lon,y=rev(lat),g(temp_mat_N[,,1,5]),plot.axes=map(add=TRUE,fill=T,col='grey') )
-    # if(survey_time[t]==1)
-    #   collect_survey_data()
     
     #==========================
     #==INIT FOR EACH YEAR
@@ -639,7 +124,6 @@ for(cost_travel in 1000){ # c(0,1000,1000*2)
     # The environmental covariates are defined at yearly time step,
     # so at the moment we parameter life history traits at a yearly 
     # scale
-    
     if(january_month[t] == T){
       
       ## Temperature data frame

@@ -19,6 +19,31 @@ proj4string(wrld_simpl)<-CRS(proj4string(pts))
 ## Find which points fall over land
 land <- !is.na(over(pts, wrld_simpl)$FIPS)
 
+#==delete critters where there is land (this will be used for movement as well)
+land_mask<-matrix(1,ncol=length(lon),nrow=length(lat),byrow=T)
+land_matrix = t(matrix(land,ncol=length(lon),nrow=length(lat)))
+for(x in 1:length(lat))
+  for(y in 1:length(lon))
+  {
+    
+    if(land_matrix[x,y] == 1){
+      land_mask[x,y]<-0
+    }
+    
+  }
+
+# filled.contour(land_mask)
+# filled.contour(x=lon,y=rev(lat),g(imm_N_at_Len[,,1,1,1]))
+# write.csv(land_mask,'landmask.csv')
+
+# Function to rotate spatial matrix
+# ugh. this is dumb, but how to automate?
+g<-function(m) t(m)[,nrow(m):1]
+
+## Make land mask NA
+land_mask_na = land_mask
+land_mask_na[which(land_mask == 0)] = NA
+
 # Compute cell area
 test = rasterFromXYZ(cbind(point_expand,rep(rnorm(nrow(point_expand)),nrow(point_expand))), crs=CRS(proj4string(wrld_simpl)), digits=5)
 cell_area = raster::area(test) %>% as.matrix()
@@ -37,7 +62,11 @@ EBS_sf = st_convex_hull(EBS_sf)
 # plot(EBS_sf)
 EBS_sp = as_Spatial(EBS_sf)
 EBS_mask = is.na(over(pts, EBS_sp)$Include)
+EBS_mask_matrix = t(matrix(EBS_mask,ncol=length(lon),nrow=length(lat)))
+EBS_mask_matrix[which(EBS_mask_matrix == T)] = 1
+EBS_mask_matrix[which(EBS_mask_matrix == F)] = 0
+
 
 # ## Check
-plot(wrld_simpl,xlim = c(min(lon), max(lon)), ylim = c(min(lat),max(lat)))
-points(pts, col=1+land, pch=16)
+# plot(wrld_simpl,xlim = c(min(lon), max(lon)), ylim = c(min(lat),max(lat)))
+# points(pts, col=1+land, pch=16)
