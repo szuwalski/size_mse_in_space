@@ -4,25 +4,24 @@
 ## B. Alglave and C. Szuwalski
 rm(list=ls())
 
-## Load packages
+## Load packages and make paths
 source("2_Max_spatial_projection/LHP_functions/libraries.R")
 print_messages <- F
 
-# Paths
-project_spatialIPM <- "../Spatial_snow_crab_2021/" # to go to working directory related to spatial IPM
-DateFile = paste0(getwd(), "/2_Max_spatial_projection/Outputs/")
-if(!dir.exists(DateFile)) dir.create(DateFile)
+#----------------------------------------------------------------------------------------------
+#--------------------------------------- Parameterization -------------------------------------
+#----------------------------------------------------------------------------------------------
 
 ## Spatial extent
 #----------------
 source("4_full_MSE/source/spatial_extent.r")
 
 ## Projection setting
-#-------------------
+#--------------------
 source("4_full_MSE/source/proj_param.r")
 
 ## Demographic settings
-#-----------------------
+#----------------------
 source("4_full_MSE/source/demographic_param.r")
 
 ## Seasonality
@@ -42,46 +41,13 @@ january_month <-rep(c(1,0,0,0,0,0,0,0,0,0,0,0),year_n)
 #----------------------------------
 source("4_full_MSE/source/survey_commercial_data.r")
 
-
 ## Load GMACS outputs for parameterizing
 #---------------------------------------
 load(file = "4_full_MSE/data/Snow_GMACS_repfile.Rdata")
 
-
-
 ## Stock assessment
 #------------------
-SA <- "GMACS"
-SA = "none"
-# "spatialIPM": spatially-explicit model IPM
-# "nonspatialIPM": non spatial model IPM
-# "GMACS": standard stock assessment model
-
-## Spatial settings
-Data_Set <- 'Snow_crab'
-
-## Number of knot/stations
-n_x = c(30, 50, 75, 100, 150, 200, 300)[3]
-
-# Output from Calc_Kmeans with knots for a triangulated mesh
-# Calc_Kmeans determines the location for a set of knots for
-# approximating spatial variation
-# n_x: the number of knots to select
-# nstart the number of times that the k-means algorithm is run while
-# searching for the best solution (default=100)
-# ter.max the number of iterations used per k-means algorithm
-Kmeans_Config = list("randomseed" = 1,
-                     "nstart" = 100,
-                     "iter.max" = 1e3)
-
-# Define studied region
-# builds an object used to determine areas to extrapolation
-# densities to when calculating indices
-strata.limits <- data.frame('STRATA' = "All_areas")
-Region = "Eastern_Bering_Sea"
-Extrapolation_List = FishStatsUtils::make_extrapolation_info(Region = Region,
-                                                             strata.limits = strata.limits)
-
+source("4_full_MSE/source/stock_assessment.R")
 
 ## Matrices of abundance at size
 #-------------------------------

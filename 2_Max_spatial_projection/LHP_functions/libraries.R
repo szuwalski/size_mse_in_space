@@ -24,6 +24,11 @@ library(svMisc)
 library(tidyverse)
 library(TMB)
 library(viridis)
-require(virtualspecies)
+library(virtualspecies)
 
 world_sf <- ne_countries(scale = "medium", returnclass = "sf")
+
+# Paths
+project_spatialIPM <- "../Spatial_snow_crab_2021/" # to go to working directory related to spatial IPM
+DateFile = paste0(getwd(), "/2_Max_spatial_projection/Outputs/")
+if(!dir.exists(DateFile)) dir.create(DateFile)
