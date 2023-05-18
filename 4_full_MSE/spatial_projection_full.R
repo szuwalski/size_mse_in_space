@@ -365,7 +365,7 @@ if(recruit_model == "max_model"){
   Recruit_spatial <- F # are life history parameters spatial?
   source("4_full_MSE/LHP/recruit_settings.R")
   
-  ## Load function for morta
+  ## Load function for recruitment
   source("4_full_MSE/LHP/recruitment.R")
   
 }
@@ -639,26 +639,43 @@ for(cost_travel in 1000){ # c(0,1000,1000*2)
     # The environmental covariates are defined at yearly time step,
     # so at the moment we parameter life history traits at a yearly 
     # scale
-    if(january_month[t] == T & growth_model == "max_model"){
+    
+    if(january_month[t] == T){
       
-      print("init growth")
-      source("4_full_MSE/LHP/growth_t.R")
+      ## Temperature data frame
+      En.cond <- mn_var_all %>% filter(simulation %in% clim_sc, year %in% Years_climsc[t] ) %>% dplyr::select(year,simulation, latitude,longitude, val)
+      En.cond <- En.cond %>% mutate(Lon = ifelse(longitude <= 180, longitude, longitude -360),Lat=latitude)
+      dat_cond <-  data.frame(coords=En.cond[,c("Lon","Lat")],Year=En.cond$year, Temp=En.cond$val, Climate_sc = En.cond$simulation)
+      colnames(dat_cond) <- c( "Lon","Lat","Year","Temp","Climate_sc")
+      crs_LL = CRS(proj4string(wrld_simpl))
+      dat_cond_sf <- st_as_sf(dat_cond, coords=c("Lon","Lat"), crs=crs_LL)
+      
+      ## Cold pool extent
+      
+      
+      if(growth_model == "max_model"){
+        
+        print("init growth")
+        source("4_full_MSE/LHP/growth_t.R")
+        
+      }
+      
+      if(morta_model == "max_model"){
+        
+        print("init morta")
+        source("4_full_MSE/LHP/morta_t.R")
+        
+      }
+      
+      if(recruit_model == "max_model"){
+        
+        print("init recruit")
+        source("4_full_MSE/LHP/recruit_t.R")
+        
+      }
       
     }
     
-    if(january_month[t] == T & morta_model == "max_model"){
-      
-      print("init morta")
-      source("4_full_MSE/LHP/morta_t.R")
-      
-    }
-    
-    if(january_month[t] == T & recruit_model == "max_model"){
-      
-      print("init recruit")
-      source("4_full_MSE/LHP/recruit_t.R")
-      
-    }
     
     
     if(print_distrib){plot(temp_mat_N[,,2,5],main="FIRST")}
@@ -1219,6 +1236,18 @@ for(cost_travel in 1000){ # c(0,1000,1000*2)
       print("Max morta")
       imm_N_at_Len[,,1,,t+1] <- temp_imm_N[,,1,]*exp(-imm_fem_M_size*1/year_step)
       imm_N_at_Len[,,2,,t+1] <- temp_imm_N[,,2,]*exp(-imm_male_M_size*1/year_step)
+      mat_N_at_Len[,,1,,t+1] <- temp_mat_N[,,1,]*exp(-mat_fem_M_size*1/year_step)
+      mat_N_at_Len[,,2,,t+1] <- temp_mat_N[,,2,]*exp(-mat_male_size*1/year_step)
+      
+    }else if(morta_model == "coldpool"){
+      
+      df = data.frame(coldpool = coldpool_range_t)
+      
+      imm_fem_M_size_cp = exp(predict(mod,df))
+      imm_male_M_size_cp = exp(predict(mod,df))
+      
+      imm_N_at_Len[,,1,,t+1] <- temp_imm_N[,,1,]*exp(-imm_fem_M_size_cp*1/year_step)
+      imm_N_at_Len[,,2,,t+1] <- temp_imm_N[,,2,]*exp(-imm_male_M_size_cp*1/year_step)
       mat_N_at_Len[,,1,,t+1] <- temp_mat_N[,,1,]*exp(-mat_fem_M_size*1/year_step)
       mat_N_at_Len[,,2,,t+1] <- temp_mat_N[,,2,]*exp(-mat_male_size*1/year_step)
       

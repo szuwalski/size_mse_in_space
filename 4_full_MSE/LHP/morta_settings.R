@@ -9,7 +9,7 @@ LHP = "morta"
 # -------------------------------------------------------------------------
 
 # - Is growth spatially defined ? -----------------------------------------
-M_spatial = TRUE
+M_spatial = F
 
 # - Parameters for spatial field ------------------------------------------
 scale_g <- 1.5 # scale of the RF
