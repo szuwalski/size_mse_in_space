@@ -38,9 +38,7 @@ Extrapolation_List = FishStatsUtils::make_extrapolation_info(Region = Region,
 #-----------
 # Name of the R script used to incorporate GMACS specifications
 Gmacs_Input_file <- "Input_GMACS_MSE"
-<<<<<<< Updated upstream
 
 source(file = file.path(here::here(), "5_GMACS", "functions", 
                         "write_GMACS_files.R"))
-=======
->>>>>>> Stashed changes
+
