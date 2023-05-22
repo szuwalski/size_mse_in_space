@@ -26,7 +26,7 @@ if(morta_model == "cody_model"){
   
   imm_N_at_Len[,,1,,t+1] <- temp_imm_N[,,1,] * exp(-as.numeric(imm_fem_M_size_cp)*1/year_step)
   imm_N_at_Len[,,2,,t+1] <- temp_imm_N[,,2,]*exp(-as.numeric(imm_male_M_size_cp)*1/year_step)
-  mat_N_at_Len[,,1,,t+1] <- temp_mat_N[,,1,]*exp(-mat_fem_M_size*1/year_step)
-  mat_N_at_Len[,,2,,t+1] <- temp_mat_N[,,2,]*exp(-mat_male_size*1/year_step)
+  mat_N_at_Len[,,1,,t+1] <- temp_mat_N[,,1,]*exp(-mat_fem_M*1/year_step)
+  mat_N_at_Len[,,2,,t+1] <- temp_mat_N[,,2,]*exp(-mat_male_M*1/year_step)
   
 }

@@ -12,13 +12,12 @@ fish_sel = selec_curve
 
 fish_sel_50_f<-NA
 fish_sel_95_f<-NA
-fish_sel_50_m<-50
-fish_sel_95_m<-101
+fish_sel_50_m<-fish_50<-95
+fish_sel_95_m<-fish_95<-101
 
 fish_sel<-rbind(1/(1+exp(-log(19)*(sizes-fish_sel_50_f)/(fish_sel_95_f-fish_sel_50_f))),
                 1/(1+exp(-log(19)*(sizes-fish_sel_50_m)/(fish_sel_95_m-fish_sel_50_m))))
 fish_sel[is.na(fish_sel)]<-0
-
 
 ##------------------------------- Calculate costs to a patch from harbour --------------------------------
 

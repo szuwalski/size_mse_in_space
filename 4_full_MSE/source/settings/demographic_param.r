@@ -184,6 +184,10 @@ fish_sel<-1/(1+exp(-log(19)*(sizes-fish_50)/(fish_95-fish_50)))
 
 ##--------------------------- weight at length parameters ---------------------------------------
 
+# One sex 
+weight_a_u<-0.001
+weight_b_u<-3
+
 weight_a_f<-0.001
 weight_b_f<-3
 

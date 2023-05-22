@@ -42,6 +42,8 @@ Fem_molt_time_Yr <- c(0,0,0,0,0,0,0,0,0,1,0,0)
 Mal_molt_time_Yr <- c(0,0,0,0,0,0,0,0,0,1,0,0)
 mate_time_Yr 	   <-c(0,0,0,0,0,0,0,1,0,1,0,0)
 SA_time_Yr       <-c(0,0,0,0,0,0,0,0,0,1,0,0)
+january_month_Yr <-c(1,0,0,0,0,0,0,0,0,0,0,0)
+
 # ==========
 
 survey_time   <-rep(survey_time_Yr,year_n)
@@ -51,6 +53,7 @@ move_time		  <-rep(move_time_Yr,year_n)
 molt_time  	  <-rbind(rep(Fem_molt_time_Yr,year_n),rep(Mal_molt_time_Yr,year_n)) # females first, males second
 mate_time 	  <-rep(mate_time_Yr,year_n)
 SA_time       <-rep(SA_time_Yr,year_n)
+january_month <-rep(c(1,0,0,0,0,0,0,0,0,0,0,0),year_n)
 
 ## Demographic settings
 #----------------------

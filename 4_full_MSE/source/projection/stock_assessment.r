@@ -16,6 +16,14 @@ if(SA == "nonspatialIPM"){
 
 if(SA == "GMACS"){
   
+  # Update data and control files
+  source(file = file.path(dir_GMACS,
+                          "functions", "Update_GMACS_file.R", fsep = fsep))
+  source(file = file.path(dir_GMACS,
+                          "functions", "Run_Gmacs.R", fsep = fsep))
+  # Now run GMACS
+  runGMACS()
+  
 }
 
 if(SA == "none"){
