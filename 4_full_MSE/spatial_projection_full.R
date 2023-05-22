@@ -4,9 +4,12 @@
 ## B. Alglave, M. Olmos, M. Veron, C. Szuwalski
 rm(list=ls())
 
-## Load packages and make paths
-#------------------------------
+
+# Local declarations ----
+fsep <- .Platform$file.sep
+
 source("2_Max_spatial_projection/LHP_functions/libraries.R")
+
 print_messages <- F
 
 ## Load and shape data for parameterzing and doing projection (GMACS, climatic projections)
@@ -29,15 +32,25 @@ source("4_full_MSE/source/settings/proj_param.r")
 #-------------
 #==Binary vectors related to period that determine when life events happen
 #==July,Aug,Sept,Oct,Nov,Dec,Jan,Feb,Mar,Apr,May,Jun
-survey_time   <-rep(c(1,0,0,0,0,0,0,0,0,0,0,0),year_n)
-fish_time		  <-rep(c(0,0,0,0,0,0,0,1,1,1,0,0),year_n)
-recruit_time	<-rep(c(0,0,0,0,0,0,0,0,0,1,0,0),year_n)
-move_time		  <-rep(c(1,1,1,1,1,1,1,1,1,1,1,1),year_n)
-molt_time  	  <-rbind(rep(c(0,0,0,0,0,0,0,0,0,1,0,0),year_n),
-                      rep(c(0,0,0,0,0,0,0,0,0,1,0,0),year_n)) # females first, males second
-mate_time 	  <-rep(c(0,0,0,0,0,0,0,1,0,1,0,0),year_n)
-SA_time       <-rep(c(0,0,0,0,0,0,0,0,0,1,0,0),year_n)
-january_month <-rep(c(1,0,0,0,0,0,0,0,0,0,0,0),year_n)
+
+# Easier to manage for GMACS ----
+survey_time_Yr   <-c(1,0,0,0,0,0,0,0,0,0,0,0)
+fish_time_Yr		 <-c(0,0,0,0,0,0,0,1,1,1,0,0)
+recruit_time_Yr	 <-c(0,0,0,0,0,0,0,0,0,1,0,0)
+move_time_Yr		 <-c(1,1,1,1,1,1,1,1,1,1,1,1)
+Fem_molt_time_Yr <- c(0,0,0,0,0,0,0,0,0,1,0,0)
+Mal_molt_time_Yr <- c(0,0,0,0,0,0,0,0,0,1,0,0)
+mate_time_Yr 	   <-c(0,0,0,0,0,0,0,1,0,1,0,0)
+SA_time_Yr       <-c(0,0,0,0,0,0,0,0,0,1,0,0)
+# ==========
+
+survey_time   <-rep(survey_time_Yr,year_n)
+fish_time		  <-rep(fish_time_Yr,year_n)
+recruit_time	<-rep(recruit_time_Yr,year_n)
+move_time		  <-rep(move_time_Yr,year_n)
+molt_time  	  <-rbind(rep(Fem_molt_time_Yr,year_n),rep(Mal_molt_time_Yr,year_n)) # females first, males second
+mate_time 	  <-rep(mate_time_Yr,year_n)
+SA_time       <-rep(SA_time_Yr,year_n)
 
 ## Demographic settings
 #----------------------
@@ -73,6 +86,7 @@ source("4_full_MSE/source/settings/survey_commercial_data.r")
 #--------------------------------------------------------------------------------------
 #--------------------------------------- Project --------------------------------------
 #--------------------------------------------------------------------------------------
+
 list_it = 0
 
 # Abundance
@@ -108,6 +122,7 @@ for(cost_travel in 1000){ # c(0,1000,1000*2)
   
   #==indices: lat,lon,sex,size,time
   for(t in 1:(length(proj_period)-1))  
+  # for(t in 1:(length(proj_period)-1))
   {
     
     print(t)
@@ -176,7 +191,6 @@ for(cost_travel in 1000){ # c(0,1000,1000*2)
     #== SPAWNING OCCURS =======
     #==========================      
     #==this makes a map of spawning biomass to be used with transition matrices for recruitment
-    
     if(mate_time[t]==1 )
     {
       #==aggregate spawnign biomass
@@ -201,6 +215,7 @@ for(cost_travel in 1000){ # c(0,1000,1000*2)
     {
       
       source("4_full_MSE/source/projection/recruitment.r")
+      
       if(print_distrib){plot(temp_mat_N[,,2,5],main="RECRUIT OCCURED")}
       
     }
@@ -220,8 +235,10 @@ for(cost_travel in 1000){ # c(0,1000,1000*2)
       
     }
     
-    
+
+    #========================== 
     #==Stock assessment
+    #========================== 
     # "spatialIPM": spatially-explicit model IPM
     # "nonspatialIPM": non spatial model IPM
     # "GMACS": standard stock assessment model
@@ -230,9 +247,9 @@ for(cost_travel in 1000){ # c(0,1000,1000*2)
       source("4_full_MSE/source/projection/make_commercial.r")
       
       source("4_full_MSE/source/projection/stock_assessment.r")
-      
+
       source("4_full_MSE/source/projection/hcr.r")
-      
+
     }
     
   }
