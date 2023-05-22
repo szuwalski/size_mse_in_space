@@ -66,7 +66,6 @@ EBS_mask_matrix = t(matrix(EBS_mask,ncol=length(lon),nrow=length(lat)))
 EBS_mask_matrix[which(EBS_mask_matrix == T)] = 1
 EBS_mask_matrix[which(EBS_mask_matrix == F)] = 0
 
-
 # ## Check
 # plot(wrld_simpl,xlim = c(min(lon), max(lon)), ylim = c(min(lat),max(lat)))
 # points(pts, col=1+land, pch=16)

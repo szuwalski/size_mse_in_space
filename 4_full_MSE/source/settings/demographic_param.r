@@ -25,7 +25,7 @@ if(size_class_settings == "rough"){
 ad_size = 45 # size at which crabs are considered mature
 
 
-##------------------------------------ Sex and maturity ---------------------------------------------
+##------------------------------------ Mortality ---------------------------------------------
 
 imm_fem_M = 0.32
 imm_male_M = 0.32
@@ -33,7 +33,7 @@ mat_fem_M = 0.26
 mat_male_M = 0.28
 morta_sd_imm = 0.1
 morta_sd_mat = 0.1
-morta_model = "cody_model"
+morta_model = "coldpool" # "cody_model", "max_model", "coldpool"
 if(morta_model == "max_model"){
   
   #==Maxime's morta parameterization
@@ -44,6 +44,12 @@ if(morta_model == "max_model"){
   
   ## Load function for morta
   source("4_full_MSE/LHP/morta.R")
+  
+}else if(morta_model == "coldpool"){
+  
+  mod<-gam(data=m_gam_dat,Imm_mort~s(coldpool,k=3),family=tw())
+  # summary(mod)
+  # plot(mod,pages=1)
   
 }
 
