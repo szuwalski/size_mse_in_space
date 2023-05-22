@@ -10,7 +10,10 @@ crs_LL = CRS(proj4string(wrld_simpl))
 dat_cond_sf <- st_as_sf(dat_cond, coords=c("Lon","Lat"), crs=crs_LL)
 
 ## Cold pool extent
-proj_cold_pool_df_2 = proj_cold_pool_df %>%
+if(! Years_climsc[t] > 2021) proj_cold_pool_df_2 = hind_cold_pool_df %>% 
+  filter(str_detect(GCM_scen,"gfdl") & str_detect(GCM_scen,clim_sc))
+
+if(Years_climsc[t] > 2021) proj_cold_pool_df_2 = proj_cold_pool_df %>%
   filter(simulation %in% clim_sc)
 
 # values for rescaling cold pool for GAM
@@ -22,6 +25,7 @@ sd_hind = sd(m_gam_dat$coldpool,na.rm=T)
 proj_cold_pool_df_3 = proj_cold_pool_df_2 %>% 
   filter(year %in% Years_climsc[t]) %>% 
   mutate(fracbelow2_scaled = (fracbelow2 - mu_forc) * sd_hind / sd_forc + mu_hind)
+
 
 
 if(growth_model == "max_model"){
