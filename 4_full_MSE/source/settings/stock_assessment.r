@@ -1,10 +1,10 @@
 ## Stock assessment configuration
 #--------------------------------
 SA <- "GMACS"
-SA = "none"
 # "spatialIPM": spatially-explicit model IPM
 # "nonspatialIPM": non spatial model IPM
 # "GMACS": standard stock assessment model
+# "none": no feedback loop
 
 ## For spatial MSE
 #-----------------
@@ -32,3 +32,12 @@ strata.limits <- data.frame('STRATA' = "All_areas")
 Region = "Eastern_Bering_Sea"
 Extrapolation_List = FishStatsUtils::make_extrapolation_info(Region = Region,
                                                              strata.limits = strata.limits)
+
+
+## For GMACS
+#-----------
+# Name of the R script used to incorporate GMACS specifications
+Gmacs_Input_file <- "Input_GMACS_MSE"
+
+source(file = file.path(here::here(), "5_GMACS", "functions", 
+                        "write_GMACS_files.R"))
