@@ -1,0 +1,26 @@
+# TheHeader
+## GMACS Version 2.01.M.01; ** MV **; Previous compilation on:  2023-03-23 10:54:35; Last compilation on:  2023-04-05 17:25:03
+# datafile
+snow_Yr1.dat
+# controlfile
+snow_Yr1.ctl
+# projectfile
+snow.prj
+# IsJittered
+0
+# sdJitter
+0.1
+# OutRefPars
+1
+# OutRecruit
+1
+# OutSSB
+1
+# Outfbar
+1
+# OutDynB0
+1
+# nyrRetro
+0
+# dataeof
+9999
