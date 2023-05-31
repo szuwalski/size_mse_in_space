@@ -1,6 +1,6 @@
 ## Stock assessment configuration
 #--------------------------------
-SA <- "GMACS"
+SA <- "none"
 # "spatialIPM": spatially-explicit model IPM
 # "nonspatialIPM": non spatial model IPM
 # "GMACS": standard stock assessment model

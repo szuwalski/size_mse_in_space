@@ -1,0 +1,206 @@
+#_============================================================ #
+#                    GMACS main data file 
+# 
+#_*** 
+#_ GMACS Version 2.01.M.01 
+#_Last GMACS mofification made by:   ** MV ** 
+#_Date of writing the data file: 2023-05-30 17:45:54 
+#_*** 
+# 
+#_Stock of interest:  Snow crab 
+#_Model name:  MSE_1 
+#_Year of assessment:   
+#_============================================================ #
+
+#_-------------------------------------- #
+##_Model dimensions
+#_-------------------------------------- #
+#_Start year
+1989 
+#_End year
+2018 
+#_Number of seasons
+12 
+#_Number of fleets
+2 
+#_Number of sexes
+1 
+#_Number of shell condition types
+1 
+#_Number of maturity types
+2 
+#_Number of size-classes in the	model
+22 
+#_Season recruitment occurs
+10 
+#_Season molting and growth occurs
+10 
+#_Season to calculate SSB
+8 
+#_Season for N output
+1 
+#_-------------------------------------- #
+
+#_-------------------------------------- #
+##_Size classes definition
+#_-------------------------------------- #
+#_maximum size-class (males then females)
+22 
+#_size_breaks (a vector giving the break points between size intervals, dim=nclass+1)
+25 30 35 40 45 50 55 60 65 70 75 80 85 90 95 100 105 110 115 120 125 130 135 
+#_-------------------------------------- #
+
+#_-------------------------------------- #
+##_Natural mortality
+#_-------------------------------------- #
+#_Natural mortality per season input type
+##_(1 = vector	by season, 2 = matrix	by season/year)
+1 
+#_Proportion of the natural mortality to be applied each season
+0.08333333 0.08333333 0.08333333 0.08333333 0.08333333 0.08333333 0.08333333 0.08333333 0.08333333 0.08333333 0.08333333 0.08333333 
+#_-------------------------------------- #
+
+#_-------------------------------------- #
+##_Fishery and survey definition
+#_-------------------------------------- #
+#_Fishing fleet	names (delimited with a space - no spaces in names)
+Pot_Fishery 
+#_Survey names (delimited with a space - no spaces in names)
+Survey_1 
+#_Are the seasons: 0 = instantaneous or 1 = continuous
+1 1 1 1 1 1 1 1 1 1 1 1 
+#_-------------------------------------- #
+
+#_-------------------------------------- #
+##_Catch data
+#_-------------------------------------- #
+#_Number of catch data frames
+1 
+#_Number of rows in each data frame
+1 
+
+#_************************************** #
+#         ** CATCH DATA **
+#_Sex: 0 = both; 1 = male; 2 = female
+#_Type of catch: 0 = total; 1 = retained; 2 = discard
+#_Units of catch: 1 = biomass; 2 = numbers
+#_Mult: 1 = use data as they are; 2 = multiply by this number (e.g., lbs to kg)
+#_Year_| Season_| Fleet_| Sex_| Obs_| CV_| Type_| Units_| Mult_| Effort_| Discard_mortality ##
+#_************************************** #
+
+
+# ** Initial_Empty_catch_DF1  **
+# Year | Season | Fleet | Sex | Obs | CV | Type | Units | Mult | Effort | Discard_mortality
+-1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+#_-------------------------------------- #
+
+#_-------------------------------------- #
+##_Relative abundance data
+#_-------------------------------------- #
+#_Number of relative abundance indices
+1 
+#_Index Type (1 = Selectivity; 2 = Selectivity + retention)
+1 
+#_Number of rows in each data frame of index data
+1 
+
+#_************************************** #
+#    ** RELATIVE ABUNDANCE	DATA **       #
+#_Index: One q is estimated for each index (the number of index values should match nSurveys)
+#_Sex: 0 = both; 1 = male; 2 = female
+#_Maturity: 0 = both; 1 = mature; 2 = immature
+#_Units of survey: 1 = biomass; 2 = numbers
+#_Index_| Year_| Season_| Fleet_| Sex_| Maturity_| Obs_| CV_| Units_| CPUE_time ##
+#_************************************** #
+
+# ** Initial_Empty_Survey  ** #
+# Index | Year | Season | Fleet | Sex | Maturity | Obs | CV | Units | CPUE_time
+-1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+#_-------------------------------------- #
+
+#_-------------------------------------- #
+##_Size composition for all fleets
+#_-------------------------------------- #
+#_Number of size frequency matrices
+4 
+#_Number of rows in each size frequency matrix
+1 1 1 1 
+#_Number of bins in each length frequency matrix
+# (i.e., number of columns in each data frame
+22 22 22 22 
+#_************************************** #
+#      ** SIZE COMPOSITION DATA **       #
+#_Sex: 0 = both; 1 = male; 2 = female
+#_Type of catch: 0 = total; 1 = retained; 2 = discard
+#_Shell: 0 = both; 1 = new shell; 2 = old shell
+#_Maturity: 0 = both; 1 = mature; 2 = immature
+#_Nsamp: the stage-1 effective sample size (this can be modified in the .CTL file)
+#_Year_| Season_| Fleet_| Sex_| Type_| Shell_| Maturity_| Nsamp_| Data Vector ##
+#_************************************** #
+
+# ** Initial_Empty_SizeFrqDF1  ** #
+# Year | Season | Fleet | Sex | Type | Shell | Maturity | Nsamp | Data Vector
+-1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+
+# ** Initial_Empty_SizeFrqDF2  ** #
+# Year | Season | Fleet | Sex | Type | Shell | Maturity | Nsamp | Data Vector
+-1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+
+# ** Initial_Empty_SizeFrqDF3  ** #
+# Year | Season | Fleet | Sex | Type | Shell | Maturity | Nsamp | Data Vector
+-1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+
+# ** Initial_Empty_SizeFrqDF4  ** #
+# Year | Season | Fleet | Sex | Type | Shell | Maturity | Nsamp | Data Vector
+-1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+#_-------------------------------------- #
+
+#_-------------------------------------- #
+##_Growth data
+#_-------------------------------------- #
+#_Type of observation (increment or change in size-class)
+#_0: no growth data; 1: growth increment data; 2: growth size-class data; 3: growth size-class values
+0 
+#_Number of observation
+0 
+#_************************************** #
+#          ** GROWTH DATA **
+#_Sex: 0 = both; 1 = male; 2 = female
+#_Premolt: premolt size
+#_Molt_Inc: size-increment
+#_Size_rel: size-at-release
+#_Size_Recap: size-at-recapture
+#_T_at_sea: time-at-liberty
+#_Recap_Year: year of recapture
+#_Number: sample size
+
+#_If growth increment data
+#_Premolt_| Sex_| Molt_Inc_| CV ##
+
+#_If growth size-class data
+#_Size_rel_| Size_Recap_| T_at_sea ##
+
+#_If growth size-class values
+#_Size_rel_| sex_| Size_Recap_| T_at_sea_| fleet_| Recap_Year_| Number ##
+#_************************************** #
+# 
+#_-------------------------------------- #
+
+#_-------------------------------------- #
+##_Environmental data
+#_-------------------------------------- #
+
+#_Number of environmental time series (different indices)
+0 
+#_Year ranges for each index (One line per index - From 1 to N env indices)
+#_Start_year_| End_year
+
+#_Environmental Indices
+#_Index_| Year_| Value
+
+#_-------------------------------------- #
+
+#_-------------------------------------- #
+##_End of data file
+#_-------------------------------------- #
+9999

@@ -40,10 +40,10 @@ if(morta_model == "max_model"){
   ## Load morta settings for spatially varying parameters
   G_spatial <- F
   Morta_spatial <- F # are life history parameters spatial?
-  source("4_full_MSE/LHP/morta_settings.R")
+  source("4_full_MSE/source/settings/morta_settings.R")
   
   ## Load function for morta
-  source("4_full_MSE/LHP/morta.R")
+  source("4_full_MSE/source/settings/morta.R")
   
 }else if(morta_model == "coldpool"){
   
@@ -53,21 +53,6 @@ if(morta_model == "max_model"){
   
 }
 
-
-##------------------------------------ Recruitment ---------------------------------------------
-
-rec_sizes <- 5
-prop_rec <- c(.25,.4,.25,.075,0.025)
-
-if(size_class_settings == "rough"){
-  rec_sizes <- 1
-  prop_rec <-1
-}
-
-if(size_class_settings == "fine"){
-  rec_sizes <-5
-  prop_rec <-c(.25,.4,.25,.075,0.025)
-}
 
 ##------------------------------------ Growth ---------------------------------------------
 
@@ -126,7 +111,7 @@ if(growth_model == "max_model"){
   ## Load growth settings for spatially varying parameters
   G_spatial <- F 
   Growth_spatial <- F # are life history parameters spatial?
-  source("4_full_MSE/LHP/growth_settings.R")
+  source("4_full_MSE/source/settings/growth_settings.R")
   
   ## Load function for growth
   source("2_Max_spatial_projection/LHP_functions/growth.R")
@@ -149,6 +134,22 @@ if(size_class_settings == "rough") term_molt_prob<-c(0.01, 0.3,0.58,0.9)
 
 ##------------------------------------ Recruitment ---------------------------------------------
 
+rec_sizes <- 5
+prop_rec <- c(.25,.4,.25,.075,0.025)
+
+if(size_class_settings == "rough"){
+  rec_sizes <- 1
+  prop_rec <-1
+}
+
+if(size_class_settings == "fine"){
+  rec_sizes <-5
+  prop_rec <-c(.25,.4,.25,.075,0.025)
+}
+
+R_stochastic = F # Whether the recruitment is stochastic or not
+
+## Parameter of 
 recruit_female = unlist(Snow_Out$Recruitment$recruits[1,])
 meanlog_recruit_female = mean(log(recruit_female))
 sdlog_female = sd(log(recruit_female))
@@ -168,10 +169,10 @@ if(recruit_model == "max_model"){
   ## Load recruit settings for spatially varying parameters
   G_spatial <- F 
   Recruit_spatial <- F # are life history parameters spatial?
-  source("4_full_MSE/LHP/recruit_settings.R")
+  source("4_full_MSE/source/settings/recruit_settings.R")
   
   ## Load function for recruitment
-  source("4_full_MSE/LHP/recruitment.R")
+  source("4_full_MSE/source/settings/recruitment.R")
   
 }
 

@@ -12,6 +12,6 @@ if(HCR == "cody"){
   functional_mat = 0
   mmb_def = 'morphometric'
   
-  source("4_full_MSE/Management/hcr_cody.R")
+  source("4_full_MSE/source/projection/hcr_cody.R")
   
 }

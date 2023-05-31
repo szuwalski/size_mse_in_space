@@ -18,8 +18,17 @@ if(recruit_model == "cody_model"){
   
 }
 
-aggreg_rec_1 = rlnorm(n = 1, mean = meanlog_recruit_female_2, sdlog = sdlog_female)
-aggreg_rec_2 = rlnorm(n = 1, mean = meanlog_recruit_male_2, sdlog = sdlog_male)
+if(R_stochastic){
+  
+  aggreg_rec_1 = rlnorm(n = 1, mean = meanlog_recruit_female_2, sdlog = sdlog_female)
+  aggreg_rec_2 = rlnorm(n = 1, mean = meanlog_recruit_male_2, sdlog = sdlog_male)
+  
+}else{
+  
+  aggreg_rec_1 = exp(meanlog_recruit_female_2)
+  aggreg_rec_2 = exp(meanlog_recruit_male_2)
+}
+
 
 tmp_rec_1 <- init_juv * aggreg_rec_1
 tmp_rec_2 <- init_juv * aggreg_rec_2

@@ -31,21 +31,21 @@ proj_cold_pool_df_3 = proj_cold_pool_df_2 %>%
 if(growth_model == "max_model"){
   
   print("init growth")
-  source("4_full_MSE/LHP/growth_t.R")
+  source("4_full_MSE/source/projection/growth_t.R")
   
 }
 
 if(morta_model == "max_model"){
   
   print("init morta")
-  source("4_full_MSE/LHP/morta_t.R")
+  source("4_full_MSE/source/projection/morta_t.R")
   
 }
 
 if(recruit_model == "max_model"){
   
   print("init recruit")
-  source("4_full_MSE/LHP/recruit_t.R")
+  source("4_full_MSE/source/projection/recruit_t.R")
   
 }
 
