@@ -16,13 +16,15 @@ for(x in 1:length(lat))
       if(land_mask[x,y]!=0 & include_loc)
       {
         
+        E_catch = q_survey * (imm_N_at_Len[x,y,2,i,t] + mat_N_at_Len[x,y,2,i,t])
+        
         # Need to implement observation pdf
         # print(paste0("x:",x,"|y:",y,"|i:",i))
         if(sci_it == 0){
           
           sci_mat = matrix(data = c(i, # size_class
                                     Years_climsc[t], # year
-                                    imm_N_at_Len[x,y,2,i,t] + mat_N_at_Len[x,y,2,i,t], # Catch_N: only male
+                                    rlnorm(n = 1, meanlog = log(E_catch), sd = sigma_survey), # Catch_N: only male
                                     cell_area[x,y], # AreaSwept_km2
                                     0, # Vessel
                                     lat[x], # Lat
@@ -35,7 +37,7 @@ for(x in 1:length(lat))
           
           line_vec = matrix(data = c(i, # size_class
                                      Years_climsc[t], # year
-                                     imm_N_at_Len[x,y,2,i,t] + mat_N_at_Len[x,y,2,i,t], # Catch_N: only male
+                                     rlnorm(n = 1, meanlog = log(E_catch), sd = sigma_survey), # Catch_N: only male
                                      cell_area[x,y], # AreaSwept_km2
                                      0, # Vessel
                                      lat[x], # Lat
@@ -53,3 +55,12 @@ sci_df = as.data.frame(sci_mat)
 colnames(sci_df) = colnames(Data_Geostat)
 sci_df$size_class = as.factor(sci_df$size_class)
 Data_Geostat = rbind(Data_Geostat,sci_df)
+
+# ## Plot data
+# Data_Geostat %>% 
+#   filter(year == Years_climsc[t]) %>% 
+#   group_by(Lon,Lat) %>% 
+#   dplyr::summarise(Catch_N = sum(Catch_N)) %>% 
+#   ggplot()+
+#   geom_raster(aes(x=Lon,y=Lat,fill=Catch_N))+
+#   scale_fill_distiller(palette = "Spectral")

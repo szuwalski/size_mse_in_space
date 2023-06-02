@@ -1,6 +1,16 @@
 ## Survey and commercial catch data
 #----------------------------------
 
+# Standard deviation of survey data
+sigma_survey = 0.5
+
+# Catchability survey
+q_survey = 1
+
+# I load these datasets from Maximes spatial IPM
+# this way, survey data and commercial data are 
+# in the good format to feed spatial IPM
+
 ## Survey data
 #-------------
 ## Load survey data for sampling locations

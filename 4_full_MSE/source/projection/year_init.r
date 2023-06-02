@@ -10,7 +10,7 @@ crs_LL = CRS(proj4string(wrld_simpl))
 dat_cond_sf <- st_as_sf(dat_cond, coords=c("Lon","Lat"), crs=crs_LL)
 
 ## Cold pool extent
-if(! Years_climsc[t] > 2021) proj_cold_pool_df_2 = hind_cold_pool_df %>% 
+if(! Years_climsc[t] < 2021) proj_cold_pool_df_2 = hind_cold_pool_df %>% 
   filter(str_detect(GCM_scen,"gfdl") & str_detect(GCM_scen,clim_sc))
 
 if(Years_climsc[t] > 2021) proj_cold_pool_df_2 = proj_cold_pool_df %>%

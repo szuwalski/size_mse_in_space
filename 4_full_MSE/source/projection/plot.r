@@ -1,6 +1,27 @@
 ## Plot projection
 #-----------------
 
+## Check plot
+vec_fact = c("init","post fishery","post growth", "post ontogenic migration","post monthly movement","post recruitment","post natural mortality")
+
+follow_ab_df$phase = factor(follow_ab_df$phase,levels = vec_fact)
+
+test = follow_ab_df %>% 
+  filter(size > 14) %>% 
+  group_by(phase,t) %>% 
+  dplyr::summarise(ab_male_mat  = ab_male_mat,
+                   ab_male_imm = ab_male_imm) %>% 
+  filter(t < 13)
+
+
+ab_male_mat_plot = ggplot(test,aes(x=t,y=ab_male_mat,fill=phase))+
+  geom_bar(stat="identity", position=position_dodge())
+ab_male_imm_plot = ggplot(test,aes(x=t,y=ab_male_imm,fill=phase))+
+  geom_bar(stat="identity", position=position_dodge())
+plot_grid(ab_male_mat_plot,ab_male_imm_plot,ncol = 2)
+
+
+## Key variable plot (catch, cost, profit, abundance)
 tot_catch<-apply(catch_by_fisher,c(5),sum,na.rm=T)
 tot_cost<-apply(cost_by_fisher,c(3),sum,na.rm=T)
 tot_profit<-apply(profit_by_fisher,c(3),sum,na.rm=T)

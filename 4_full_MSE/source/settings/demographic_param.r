@@ -50,7 +50,7 @@ if(morta_model == "max_model"){
   mod<-gam(data=m_gam_dat,Imm_mort~s(coldpool,k=3),family=tw())
   # summary(mod)
   # plot(mod,pages=1)
-  
+
 }
 
 

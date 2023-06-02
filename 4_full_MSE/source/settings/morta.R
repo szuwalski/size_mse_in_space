@@ -14,6 +14,7 @@ mortality <- function(E_morta_par,
   
   #-- no space
   if (!pars_LHP_setting$LHP_spatial) {
+    
     for (k in 1:n_s) {
       morta_matrix[k] = E_morta_par
     }
@@ -89,4 +90,3 @@ mortality <- function(E_morta_par,
   return(Morta_OM)
   
 }
-

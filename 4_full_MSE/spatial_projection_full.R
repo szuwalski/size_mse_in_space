@@ -18,36 +18,11 @@ source("4_full_MSE/source/settings/load_data.r")
 #----------------
 source("4_full_MSE/source/settings/spatial_extent.r")
 
-## Climate projection
-#--------------------
-source("4_full_MSE/source/settings/proj_param.r")
-
-## Seasonality
-#-------------
-#==Binary vectors related to period that determine when life events happen
-#==July,Aug,Sept,Oct,Nov,Dec,Jan,Feb,Mar,Apr,May,Jun
-
-# Easier to manage for GMACS ----
-survey_time_Yr   <-c(1,0,0,0,0,0,0,0,0,0,0,0)
-fish_time_Yr		 <-c(0,0,0,0,0,0,0,1,1,1,0,0)
-recruit_time_Yr	 <-c(0,0,0,0,0,0,0,0,0,1,0,0)
-move_time_Yr		 <-c(1,1,1,1,1,1,1,1,1,1,1,1)
-Fem_molt_time_Yr <- c(0,0,0,0,0,0,0,0,0,1,0,0)
-Mal_molt_time_Yr <- c(0,0,0,0,0,0,0,0,0,1,0,0)
-mate_time_Yr 	   <-c(0,0,0,0,0,0,0,1,0,1,0,0)
-SA_time_Yr       <-c(0,0,0,0,0,0,0,0,0,1,0,0)
-january_month_Yr <-c(1,0,0,0,0,0,0,0,0,0,0,0)
-
-# ==========
-
-survey_time   <-rep(survey_time_Yr,year_n)
-fish_time		  <-rep(fish_time_Yr,year_n)
-recruit_time	<-rep(recruit_time_Yr,year_n)
-move_time		  <-rep(move_time_Yr,year_n)
-molt_time  	  <-rbind(rep(Fem_molt_time_Yr,year_n),rep(Mal_molt_time_Yr,year_n)) # females first, males second
-mate_time 	  <-rep(mate_time_Yr,year_n)
-SA_time       <-rep(SA_time_Yr,year_n)
-january_month <-rep(c(1,0,0,0,0,0,0,0,0,0,0,0),year_n)
+## Time series characteristics
+#-----------------------------
+# Time serie limit, seasonality 
+# climatic scenarios
+source("4_full_MSE/source/settings/time_series_settings.r")
 
 ## Demographic settings
 #----------------------
@@ -132,6 +107,8 @@ print_distrib = F
 print_messages <- F
 
 
+for()
+
 #==indices: lat,lon,sex,size,time
 for(t in 1:(length(proj_period)-1))
   # for(t in 1:(length(proj_period)-1))
@@ -169,6 +146,7 @@ for(t in 1:(length(proj_period)-1))
       follow_ab_df[follow_ab_iter,"t"] = t
       follow_ab_df[follow_ab_iter,"iter"] = follow_ab_iter
       follow_ab_iter=follow_ab_iter+1
+      
     }
     
   }
@@ -241,6 +219,7 @@ for(t in 1:(length(proj_period)-1))
         follow_ab_df[follow_ab_iter,"t"] = t
         follow_ab_df[follow_ab_iter,"iter"] = follow_ab_iter
         follow_ab_iter=follow_ab_iter+1
+        
       }
       
     }
@@ -335,6 +314,7 @@ for(t in 1:(length(proj_period)-1))
   # "spatialIPM": spatially-explicit model IPM
   # "nonspatialIPM": non spatial model IPM
   # "GMACS": standard stock assessment model
+  # "none": no feedback loop
   if(SA_time[t] == 1){
     
     source("4_full_MSE/source/projection/make_commercial.r")
@@ -348,6 +328,6 @@ for(t in 1:(length(proj_period)-1))
 }
 
 ## Plot results
-source("4_full_MSE/source/projection/plot.r")
+# source("4_full_MSE/source/projection/plot.r")
 
 ## Save codes
