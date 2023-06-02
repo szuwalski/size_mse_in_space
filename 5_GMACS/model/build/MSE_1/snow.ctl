@@ -4,7 +4,7 @@
 #_*** 
 #_  GMACS Version 2.01.M.01 
 #_Last GMACS mofification made by:   ** MV ** 
-#_Date of writing the control file: 2023-05-30 17:45:56 
+#_Date of writing the control file: 2023-06-02 09:51:33 
 #_*** 
 # 
 #_Stock of interest:  Snow crab 

@@ -1,7 +1,8 @@
 #################
 ## Fleet dynamics
 #################
-# T. Wang
+# T. Wang, B alglave
+
 library(ggplot2)
 library(ggridges)
 library(sf)
@@ -40,7 +41,7 @@ N_area = length(area_id)
 #   mutate(prop_eff = effort/sum(effort))
 # focus only on months 1,2,and 3
 
-ice_area_grid <- read.csv("4_full_MSE/data/weekly_ice_area_per_grid_cell.csv")%>% select(-X)
+ice_area_grid <- read.csv("4_full_MSE/data/weekly_ice_area_per_grid_cell.csv") %>% dplyr::select(-X)
 ice_area_grid <- ice_area_grid %>% rename(ice_date = date) %>% mutate(ice_date = as.Date(ice_date))
 
 mean_ice = ice_area_grid %>% 
@@ -50,7 +51,9 @@ mean_ice = ice_area_grid %>%
  arrange(stat_area)
 
 #== Sorting
-sorting_season = read.csv("4_full_MSE/data/sorting_by_season.csv") %>% select(-X) %>% select(statarea,season,legal_prop)
+sorting_season = read.csv("4_full_MSE/data/sorting_by_season.csv") %>%
+  dplyr::select(-X) %>%
+  dplyr::select(statarea,season,legal_prop)
 
 mean_sort = sorting_season %>%
   group_by(statarea) %>%
@@ -61,15 +64,17 @@ mean_sort = sorting_season %>%
 # since port of landing varies for each trip, I assume that vessels will deliver to nearest port
 # issue: this won't deal with catcher-processor vessels and stationary floating processors
 plants = sf::st_read("4_full_MSE/data/ebs_crab_plants/ebs_crab_plants.shp") %>% 
-  st_drop_geometry() %>% select(General_Ar,Latitude,Longitude) 
+  st_drop_geometry() %>% dplyr::select(General_Ar,Latitude,Longitude) 
 
-the_d_plants = the_d %>% select(stat_area, lat,lon) %>% expand_grid(plants)
+the_d_plants = the_d %>% dplyr::select(stat_area, lat,lon) %>% expand_grid(plants)
 
 library(geosphere)
 the_d_plants$port_dist = distHaversine(the_d_plants[, c('lon', 'lat')], the_d_plants[, c('Longitude', 'Latitude')])/1000
 
-stat_area_port_dist = the_d_plants %>% group_by(stat_area) %>% filter(port_dist==min(port_dist)) %>% 
-  select(stat_area,port_dist) %>% unique()
+stat_area_port_dist = the_d_plants %>% 
+  group_by(stat_area) %>% 
+  filter(port_dist==min(port_dist)) %>% 
+  dplyr::select(stat_area,port_dist) %>% unique()
 
 # set up months and how many fishing trips per month
 month_seq=rep(1:3, each=2)
@@ -103,6 +108,7 @@ for(i in 1:nrow(month_i_df)){
   
   fishery_history$cpue[i,] = rexp(32, rate = 1/100)
   fishery_history$risk[i,] = rnorm(32,10,2)
+  
 }
 
 

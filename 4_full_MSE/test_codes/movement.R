@@ -117,4 +117,3 @@ for(t in 1:1000){
 }
 
 plot(mov_mat_temp,main=paste0("t = ",t),asp = 1)
-

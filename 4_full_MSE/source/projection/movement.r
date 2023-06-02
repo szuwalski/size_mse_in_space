@@ -25,7 +25,7 @@ for(sex in 1:2)
       mov_mat_temp = temp_mat_N[,,sex,x]
       
       mov_imm_v = mfraction_gg_ad %*% as.vector(t(mov_imm_temp))
-      mov_mat_v = mfraction_gg_ad %*% as.vector(t(mov_imm_temp))
+      mov_mat_v = mfraction_gg_ad %*% as.vector(t(mov_mat_temp))
       
       mov_imm_temp_2 = matrix(mov_imm_v, nrow = length(lat), ncol = length(lon),byrow = T)
       mov_mat_temp_2 = matrix(mov_mat_v, nrow = length(lat), ncol = length(lon),byrow = T)
@@ -34,6 +34,9 @@ for(sex in 1:2)
     
     temp_imm_N[,,sex,x] = mov_imm_temp_2
     temp_mat_N[,,sex,x] = mov_mat_temp_2
+    
+    
+    # sum(mov_mat_temp) / sum(mov_mat_temp_2)
     
     # ## Check that movement happens
     # x11()

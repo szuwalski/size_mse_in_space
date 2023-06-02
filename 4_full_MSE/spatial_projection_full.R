@@ -1,16 +1,10 @@
 ###################################################
-## spatial MSE loop for Snow Crab of the Bering Sea
+## Spatial MSE loop for Snow Crab of the Bering Sea
 ###################################################
 ## B. Alglave, M. Olmos, M. Veron, C. Szuwalski
 rm(list=ls())
 
-
-# Local declarations ----
-fsep <- .Platform$file.sep
-
-source("2_Max_spatial_projection/LHP_functions/libraries.R")
-
-print_messages <- F
+source("4_full_MSE/source/settings/libraries.R")
 
 ## Load and shape data for parameterzing and doing projection (GMACS, climatic projections)
 #------------------------------------------------------------------------------------------
@@ -73,7 +67,7 @@ source("4_full_MSE/source/settings/proj_to_fish.R")
 
 HCR = "cody"
 fmsy_proxy = 1
-bmsy_proxy = 183.1*1e9
+bmsy_proxy = 183.1*1e9 / 1e3
 b_hcr = 2
 a_hcr = 0
 
@@ -92,11 +86,13 @@ source("4_full_MSE/source/settings/survey_commercial_data.r")
 
 list_it = 0
 
-# Abundance
+## Objects to stock variables
+#----------------------------
+# Abundance list
 imm_N_at_Len_full = list()
 mat_N_at_Len_full = list()
 
-# Exploitation
+# Fishery list
 total_spatial_catch_full = list()
 catch_by_fisher_full = list()
 profit_by_fisher_full = list()
@@ -105,16 +101,7 @@ all_net_benefit_patch_full = list()
 chosen_patch_full = list()
 all_chosen_patch_full = list()
 
-list_info = data.frame(it = 0,
-                       cost_travel = 0)
-
-max_quota_it = 100 # maximum iteration for filling the quota
-use_harv = 1
-
-print_distrib = F
-
-# c(0,1000,1000*2)
-
+# Time-steps array
 total_spatial_catch<-array(0,dim=c(length(lat),length(lon),sexN,length(sizes),length(proj_period)))
 total_spatial_catch_nb<-array(0,dim=c(length(lat),length(lon),sexN,length(sizes),length(proj_period)))
 catch_by_fisher<-array(0,dim=c(length(lat),length(lon),sexN,length(sizes),length(proj_period),fishers))
@@ -122,6 +109,28 @@ profit_by_fisher<-array(0,dim=c(length(lat),length(lon),length(proj_period),fish
 cost_by_fisher<-array(0,dim=c(length(lat),length(lon),length(proj_period),fishers))
 all_net_benefit_patch=array(0,dim=c(length(lat),length(lon),length(proj_period),fishers))
 all_chosen_patch=array(0,dim=c(2,length(proj_period),fishers))
+
+## For debugging
+#---------------
+## Fix some values so that the loop works fine
+max_quota_it = 100 # maximum iteration for filling the quota (so that we are not blocked in a while loop)
+use_harv = 1
+
+## Following abundance throughout the loop
+follow_ab = T
+follow_ab_iter = 1
+follow_ab_df = data.frame(phase = "0",
+                          size = 0,
+                          ab_male_mat = 0,
+                          ab_male_imm = 0,
+                          t = 1)
+
+## Print distribution throughout the loop
+print_distrib = F
+
+## Print messages for identifying where are bugs
+print_messages <- F
+
 
 #==indices: lat,lon,sex,size,time
 for(t in 1:(length(proj_period)-1))
@@ -132,6 +141,7 @@ for(t in 1:(length(proj_period)-1))
   #==create a 'working' array for a given time step of both mature and immature critters
   temp_imm_N<-imm_N_at_Len[,,,,t]
   temp_mat_N<-mat_N_at_Len[,,,,t]
+  
   
   #==========================
   #== INIT FOR EACH YEAR ====
@@ -147,6 +157,23 @@ for(t in 1:(length(proj_period)-1))
   
   if(print_distrib){plot(temp_mat_N[,,2,5],main="FIRST")}
   
+  ## Follow up chunk
+  if(follow_ab){
+    
+    for(size in 1:length(sizes)){
+      
+      follow_ab_df[follow_ab_iter,"phase"] = "init"
+      follow_ab_df[follow_ab_iter,"size"] = size
+      follow_ab_df[follow_ab_iter,"ab_male_imm"] = sum(temp_imm_N[,,2,size])
+      follow_ab_df[follow_ab_iter,"ab_male_mat"] = sum(temp_mat_N[,,2,size])
+      follow_ab_df[follow_ab_iter,"t"] = t
+      follow_ab_df[follow_ab_iter,"iter"] = follow_ab_iter
+      follow_ab_iter=follow_ab_iter+1
+    }
+    
+  }
+  
+  
   #==========================
   #== FISHERY OCCURS ========
   #==========================
@@ -161,7 +188,25 @@ for(t in 1:(length(proj_period)-1))
     
     if(print_distrib){plot(temp_mat_N[,,2,5],main="FISHERY OCCURED")}
     
+    ## Follow up chunk
+    if(follow_ab){
+      
+      for(size in 1:length(sizes)){
+        
+        follow_ab_df[follow_ab_iter,"phase"] = "post fishery"
+        follow_ab_df[follow_ab_iter,"size"] = size
+        follow_ab_df[follow_ab_iter,"ab_male_imm"] = sum(temp_imm_N[,,2,size])
+        follow_ab_df[follow_ab_iter,"ab_male_mat"] = sum(temp_mat_N[,,2,size])
+        follow_ab_df[follow_ab_iter,"t"] = t
+        follow_ab_df[follow_ab_iter,"iter"] = follow_ab_iter
+        follow_ab_iter=follow_ab_iter+1
+        
+      }
+      
+    }
+    
   }
+  
   
   
   #==========================
@@ -183,6 +228,22 @@ for(t in 1:(length(proj_period)-1))
   {
     
     source("4_full_MSE/source/projection/movement.r")
+    
+    ## Follow up chunk
+    if(follow_ab){
+      
+      for(size in 1:length(sizes)){
+        
+        follow_ab_df[follow_ab_iter,"phase"] = "post monthly movement"
+        follow_ab_df[follow_ab_iter,"size"] = size
+        follow_ab_df[follow_ab_iter,"ab_male_imm"] = sum(temp_imm_N[,,2,size])
+        follow_ab_df[follow_ab_iter,"ab_male_mat"] = sum(temp_mat_N[,,2,size])
+        follow_ab_df[follow_ab_iter,"t"] = t
+        follow_ab_df[follow_ab_iter,"iter"] = follow_ab_iter
+        follow_ab_iter=follow_ab_iter+1
+      }
+      
+    }
     
   }
   
@@ -217,6 +278,23 @@ for(t in 1:(length(proj_period)-1))
     
     if(print_distrib){plot(temp_mat_N[,,2,5],main="RECRUIT OCCURED")}
     
+    ## Follow up chunk
+    if(follow_ab){
+      
+      for(size in 1:length(sizes)){
+        
+        follow_ab_df[follow_ab_iter,"phase"] = "post recruitment"
+        follow_ab_df[follow_ab_iter,"size"] = size
+        follow_ab_df[follow_ab_iter,"ab_male_imm"] = sum(temp_imm_N[,,2,size])
+        follow_ab_df[follow_ab_iter,"ab_male_mat"] = sum(temp_mat_N[,,2,size])
+        follow_ab_df[follow_ab_iter,"t"] = t
+        follow_ab_df[follow_ab_iter,"iter"] = follow_ab_iter
+        follow_ab_iter=follow_ab_iter+1
+        
+      }
+      
+    }
+    
   }
   
   
@@ -225,6 +303,24 @@ for(t in 1:(length(proj_period)-1))
   #==========================
   source("4_full_MSE/source/projection/mortality.R")
 
+  ## Follow up chunk
+  if(follow_ab){
+    
+    for(size in 1:length(sizes)){
+      
+      follow_ab_df[follow_ab_iter,"phase"] = "post natural mortality"
+      follow_ab_df[follow_ab_iter,"size"] = size
+      follow_ab_df[follow_ab_iter,"ab_male_imm"] = sum(imm_N_at_Len[,,2,size,t+1],na.rm=T)
+      follow_ab_df[follow_ab_iter,"ab_male_mat"] = sum(mat_N_at_Len[,,2,size,t+1],na.rm=T)
+      follow_ab_df[follow_ab_iter,"t"] = t
+      follow_ab_df[follow_ab_iter,"iter"] = follow_ab_iter
+      follow_ab_iter=follow_ab_iter+1
+      
+    }
+    
+  }
+  
+  
   #==generate scientific (1 sample per cell grid - could be something else)
   if(survey_time[t] == 1){
     
@@ -251,21 +347,7 @@ for(t in 1:(length(proj_period)-1))
   
 }
 
-list_it = list_it + 1
-list_info[list_it,"it"] = list_it
-list_info[list_it,"cost_travel"] = cost_travel
-
-# Abundance
-imm_N_at_Len_full[[list_it]] = imm_N_at_Len
-mat_N_at_Len_full[[list_it]] = mat_N_at_Len
-
-# Catch list
-total_spatial_catch_full[[list_it]] = total_spatial_catch
-catch_by_fisher_full[[list_it]] = catch_by_fisher
-profit_by_fisher_full[[list_it]] = profit_by_fisher
-cost_by_fisher_full[[list_it]] = cost_by_fisher
-all_net_benefit_patch_full[[list_it]] = all_net_benefit_patch
-all_chosen_patch_full[[list_it]] = all_chosen_patch
-
-
+## Plot results
 source("4_full_MSE/source/projection/plot.r")
+
+## Save codes

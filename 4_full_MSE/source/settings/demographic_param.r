@@ -33,7 +33,7 @@ mat_fem_M = 0.26
 mat_male_M = 0.28
 morta_sd_imm = 0.1
 morta_sd_mat = 0.1
-morta_model = "coldpool" # "cody_model", "max_model", "coldpool"
+morta_model = "cody_model" # "cody_model", "max_model", "coldpool"
 if(morta_model == "max_model"){
   
   #==Maxime's morta parameterization
@@ -147,7 +147,7 @@ if(size_class_settings == "fine"){
   prop_rec <-c(.25,.4,.25,.075,0.025)
 }
 
-R_stochastic = F # Whether the recruitment is stochastic or not
+R_stochastic = T # Whether the recruitment is stochastic or not
 
 ## Parameter of 
 recruit_female = unlist(Snow_Out$Recruitment$recruits[1,])

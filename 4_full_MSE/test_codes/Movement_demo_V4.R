@@ -54,14 +54,3 @@ mean1 = weighted.mean(1:n_g, w=mfraction_gg[,ceiling(n_g/2)])
 diffusion_coefficient * 2  # 2*D because variance of displacement is 2*D in one-dimension
 
 # ----------------------------------------------------------------------------------------
-
-
-
-
-
-
-
-
-
-
-

@@ -125,18 +125,36 @@ for(x in 1:nrow(imm_N_at_Len[,,,,t])){
   
 }
 
+## Follow up chunk
+if(follow_ab){
+  
+  for(size in 1:length(sizes)){
+    
+    follow_ab_df[follow_ab_iter,"phase"] = "post growth"
+    follow_ab_df[follow_ab_iter,"size"] = size
+    follow_ab_df[follow_ab_iter,"ab_male_imm"] = sum(temp_imm_N[,,2,size])
+    follow_ab_df[follow_ab_iter,"ab_male_mat"] = sum(temp_mat_N[,,2,size])
+    follow_ab_df[follow_ab_iter,"t"] = t
+    follow_ab_iter=follow_ab_iter+1
+  }
+  
+}
+
+
 ## Ontogenic movement
 #--------------------
 # that's rough, but cannot make better at the moment
 # the best would be to make some kind of transition 
 # movement from adult to juvenile with Jim's model 
 
+# Take the size 
 which_ad_size = which(sizes < ad_size)
 which_ad_size = which_ad_size[length(which_ad_size)] + 1
 
-if(length(dim(size_transition_mat_m_imm)) == 2){
+# Compute last size at which we model ontogenic migration
+if(length(dim(size_transition_mat_m_imm)) == 2){ # for Cody's model (size transition matrix dimensions = 2)
   last_size_mig = which(size_transition_mat_m_imm[which_ad_size,] < 0.001)[which_ad_size]
-}else if(length(dim(size_transition_mat_m_imm)) == 5){
+}else if(length(dim(size_transition_mat_m_imm)) == 5){ # for Max's model (size transition matrix dimensions = 5)
   last_size_mig2 = c()
   for(x in 1:length(lat)){
     for(y in 1:length(lon)){
@@ -148,12 +166,16 @@ if(length(dim(size_transition_mat_m_imm)) == 2){
   last_size_mig = max(last_size_mig2)
 }
 
+# For each size class where we apply ontogenic migration
 for(s in which_ad_size:last_size_mig){
-  print(s)
+  # print(s)
   ontog_mig_N_imm_female = 0
   ontog_mig_N_imm_male = 0
   ontog_mig_N_mat_female = 0
   ontog_mig_N_mat_male = 0
+  
+  # For each cell of the grid in the juvenile habitats,
+  # compute 
   for(x in 1:length(lon)){
     for(y in 1:length(lat)){
       if(init_juv[x,y] > 0){
@@ -162,30 +184,46 @@ for(s in which_ad_size:last_size_mig){
         ontog_mig_N_imm_male = ontog_mig_N_imm_male + temp_imm_N[x,y,2,s]
         ontog_mig_N_mat_female = ontog_mig_N_mat_female + temp_mat_N[x,y,1,s]
         ontog_mig_N_mat_male = ontog_mig_N_mat_male + temp_mat_N[x,y,2,s]
-        
+
         temp_imm_N[x,y,1,s] = 0
         temp_imm_N[x,y,2,s] = 0
         temp_mat_N[x,y,1,s] = 0
         temp_mat_N[x,y,2,s] = 0
-        
+
       }
     }
   }
-  
+
   Ab_ontog_mig_N_imm_female = sum(ontog_mig_N_imm_female)
   Ab_ontog_mig_N_imm_male = sum(ontog_mig_N_imm_male)
   Ab_ontog_mig_N_mat_female = sum(ontog_mig_N_mat_female)
   Ab_ontog_mig_N_mat_male = sum(ontog_mig_N_mat_male)
-  
-  ontog_mig_N_imm_female = Ab_ontog_mig_N_imm_female * init_adult
-  ontog_mig_N_imm_male = Ab_ontog_mig_N_imm_male * init_adult
-  ontog_mig_N_mat_female = Ab_ontog_mig_N_mat_female * init_adult
-  ontog_mig_N_mat_male = Ab_ontog_mig_N_mat_male * init_adult
-  
-  temp_imm_N[,,1,s] = ontog_mig_N_imm_female
-  temp_imm_N[,,2,s] = ontog_mig_N_imm_male
-  temp_mat_N[,,1,s] = ontog_mig_N_mat_female
-  temp_mat_N[,,2,s] = ontog_mig_N_mat_male
-  
+
+  Map_ontog_mig_N_imm_female = Ab_ontog_mig_N_imm_female * init_adult
+  Map_ontog_mig_N_imm_male = Ab_ontog_mig_N_imm_male * init_adult
+  Map_ontog_mig_N_mat_female = Ab_ontog_mig_N_mat_female * init_adult
+  Map_ontog_mig_N_mat_male = Ab_ontog_mig_N_mat_male * init_adult
+
+  temp_imm_N[,,1,s] = temp_imm_N[,,1,s] + Map_ontog_mig_N_imm_female
+  temp_imm_N[,,2,s] = temp_imm_N[,,2,s] + Map_ontog_mig_N_imm_male
+  temp_mat_N[,,1,s] = temp_mat_N[,,1,s] + Map_ontog_mig_N_mat_female
+  temp_mat_N[,,2,s] = temp_mat_N[,,2,s] + Map_ontog_mig_N_mat_male
+
 }
 
+## Follow up chunk
+if(follow_ab){
+  
+  for(size in 1:length(sizes)){
+    
+    follow_ab_df[follow_ab_iter,"phase"] = "post ontogenic migration"
+    follow_ab_df[follow_ab_iter,"size"] = size
+    follow_ab_df[follow_ab_iter,"ab_male_imm"] = sum(temp_imm_N[,,2,size])
+    follow_ab_df[follow_ab_iter,"ab_male_mat"] = sum(temp_mat_N[,,2,size])
+    follow_ab_df[follow_ab_iter,"t"] = t
+    follow_ab_df[follow_ab_iter,"iter"] = follow_ab_iter
+    follow_ab_iter=follow_ab_iter+1
+    
+  }
+  
+}
