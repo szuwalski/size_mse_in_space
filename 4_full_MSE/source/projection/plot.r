@@ -2,16 +2,23 @@
 #-----------------
 
 ## Check plot
-vec_fact = c("init","post fishery","post growth", "post ontogenic migration","post monthly movement","post recruitment","post natural mortality")
+vec_fact = c("init",
+             "post fishery",
+             "post growth",
+             "post ontogenic migration",
+             "post monthly movement",
+             "post recruitment",
+             "post natural mortality")
 
 follow_ab_df$phase = factor(follow_ab_df$phase,levels = vec_fact)
 
 test = follow_ab_df %>% 
-  filter(size > 14) %>% 
+  # filter(size > 14) %>% 
+  # filter(t < 13) %>%
+  filter(phase == "init") %>%
   group_by(phase,t) %>% 
-  dplyr::summarise(ab_male_mat  = ab_male_mat,
-                   ab_male_imm = ab_male_imm) %>% 
-  filter(t < 13)
+  dplyr::summarise(ab_male_mat  = sum(ab_mat),
+                   ab_male_imm = sum(ab_imm))
 
 
 ab_male_mat_plot = ggplot(test,aes(x=t,y=ab_male_mat,fill=phase))+

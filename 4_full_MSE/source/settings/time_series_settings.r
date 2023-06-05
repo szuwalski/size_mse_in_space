@@ -1,7 +1,7 @@
 #####################
 ## Time series setting
 #####################
-year_n	 <- 50 # Number of years
+year_n	 <- 30 # Number of years
 year_step <- 12 # Number of time steps
 proj_period	<- seq(1,year_step*year_n) # Projection period
 Start_Y = 2019 # Starting year

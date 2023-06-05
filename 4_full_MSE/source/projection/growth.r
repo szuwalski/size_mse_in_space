@@ -125,20 +125,17 @@ for(x in 1:nrow(imm_N_at_Len[,,,,t])){
   
 }
 
-## Follow up chunk
-if(follow_ab){
-  
-  for(size in 1:length(sizes)){
-    
-    follow_ab_df[follow_ab_iter,"phase"] = "post growth"
-    follow_ab_df[follow_ab_iter,"size"] = size
-    follow_ab_df[follow_ab_iter,"ab_male_imm"] = sum(temp_imm_N[,,2,size])
-    follow_ab_df[follow_ab_iter,"ab_male_mat"] = sum(temp_mat_N[,,2,size])
-    follow_ab_df[follow_ab_iter,"t"] = t
-    follow_ab_iter=follow_ab_iter+1
-  }
-  
-}
+## Follow up chunk (only male at the moment)
+follow_res = follow_ab_f(follow_ab_df,
+                         simu_name,
+                         phase = "post growth",
+                         ab_imm_matrix = temp_imm_N[,,2,],
+                         ab_mat_matrix = temp_mat_N[,,2,],
+                         follow_ab_iter = follow_ab_iter,
+                         t = t,
+                         follow_ab = follow_ab)
+follow_ab_df = follow_res[[1]]
+follow_ab_iter = follow_res[[2]]
 
 
 ## Ontogenic movement
@@ -211,19 +208,14 @@ for(s in which_ad_size:last_size_mig){
 
 }
 
-## Follow up chunk
-if(follow_ab){
-  
-  for(size in 1:length(sizes)){
-    
-    follow_ab_df[follow_ab_iter,"phase"] = "post ontogenic migration"
-    follow_ab_df[follow_ab_iter,"size"] = size
-    follow_ab_df[follow_ab_iter,"ab_male_imm"] = sum(temp_imm_N[,,2,size])
-    follow_ab_df[follow_ab_iter,"ab_male_mat"] = sum(temp_mat_N[,,2,size])
-    follow_ab_df[follow_ab_iter,"t"] = t
-    follow_ab_df[follow_ab_iter,"iter"] = follow_ab_iter
-    follow_ab_iter=follow_ab_iter+1
-    
-  }
-  
-}
+## Follow up chunk (only male at the moment)
+follow_res = follow_ab_f(follow_ab_df,
+                         simu_name,
+                         phase = "post ontogenic migration",
+                         ab_imm_matrix = temp_imm_N[,,2,],
+                         ab_mat_matrix = temp_mat_N[,,2,],
+                         follow_ab_iter = follow_ab_iter,
+                         t = t,
+                         follow_ab = follow_ab)
+follow_ab_df = follow_res[[1]]
+follow_ab_iter = follow_res[[2]]

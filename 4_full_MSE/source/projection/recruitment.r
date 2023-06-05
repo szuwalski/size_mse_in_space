@@ -5,8 +5,6 @@
 #==ultimately we need an algorithm to determine location and intensity of recruitment
 #==teleconnections postdoc will hopefully help with this
 
-print('Recruit')
-
 if(recruit_model == "cody_model"){
   
   meanlog_recruit_male_2 = meanlog_recruit_male
@@ -35,7 +33,10 @@ tmp_rec_2 <- init_juv * aggreg_rec_2
 
 for(r in 1:rec_sizes)
 {
-  temp_imm_N[,,1,r] <- temp_imm_N[,,1,r] + tmp_rec_1*prop_rec[r]
+  # print(sum(temp_imm_N[,,2,]))
+  temp_imm_N[,,1,r] <- temp_imm_N[,,1,r] + tmp_rec_1 * prop_rec[r]
   temp_imm_N[,,2,r] <- temp_imm_N[,,2,r] + tmp_rec_2*prop_rec[r]
+  # print(sum(temp_imm_N[,,2,]))
   
 }
+

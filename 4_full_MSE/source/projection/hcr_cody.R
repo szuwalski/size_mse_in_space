@@ -54,3 +54,6 @@ f_mort<-in_f
 quota_nb = f_mort / (f_mort + m) * (1 - exp(-(f_mort + m))) * n_at_size * fish_sel_hcr
 quota_biom = sum(weight_at_size * quota_nb)
 quota<-rep(quota_biom/fishers,fishers)
+
+in_f_vec = c(in_f_vec,in_f)
+quota_vec = c(quota_vec,quota_biom)

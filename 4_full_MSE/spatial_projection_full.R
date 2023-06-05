@@ -59,275 +59,210 @@ source("4_full_MSE/source/settings/survey_commercial_data.r")
 #--------------------------------------- Project --------------------------------------
 #--------------------------------------------------------------------------------------
 
-list_it = 0
+## Stocking and debugging param for projections
+source("4_full_MSE/source/settings/stocking_and_debug.r")
 
-## Objects to stock variables
-#----------------------------
-# Abundance list
-imm_N_at_Len_full = list()
-mat_N_at_Len_full = list()
-
-# Fishery list
-total_spatial_catch_full = list()
-catch_by_fisher_full = list()
-profit_by_fisher_full = list()
-cost_by_fisher_full = list()
-all_net_benefit_patch_full = list()
-chosen_patch_full = list()
-all_chosen_patch_full = list()
-
-# Time-steps array
-total_spatial_catch<-array(0,dim=c(length(lat),length(lon),sexN,length(sizes),length(proj_period)))
-total_spatial_catch_nb<-array(0,dim=c(length(lat),length(lon),sexN,length(sizes),length(proj_period)))
-catch_by_fisher<-array(0,dim=c(length(lat),length(lon),sexN,length(sizes),length(proj_period),fishers))
-profit_by_fisher<-array(0,dim=c(length(lat),length(lon),length(proj_period),fishers))
-cost_by_fisher<-array(0,dim=c(length(lat),length(lon),length(proj_period),fishers))
-all_net_benefit_patch=array(0,dim=c(length(lat),length(lon),length(proj_period),fishers))
-all_chosen_patch=array(0,dim=c(2,length(proj_period),fishers))
-
-## For debugging
-#---------------
-## Fix some values so that the loop works fine
-max_quota_it = 100 # maximum iteration for filling the quota (so that we are not blocked in a while loop)
-use_harv = 1
-
-## Following abundance throughout the loop
-follow_ab = T
-follow_ab_iter = 1
-follow_ab_df = data.frame(phase = "0",
-                          size = 0,
-                          ab_male_mat = 0,
-                          ab_male_imm = 0,
-                          t = 1)
-
-## Print distribution throughout the loop
-print_distrib = F
-
-## Print messages for identifying where are bugs
-print_messages <- F
-
-
-for()
-
-#==indices: lat,lon,sex,size,time
-for(t in 1:(length(proj_period)-1))
-  # for(t in 1:(length(proj_period)-1))
-{
+for(clim_sc in c("rcp45","rcp85","ssp126","ssp585")){
   
-  print(t)
-  #==create a 'working' array for a given time step of both mature and immature critters
-  temp_imm_N<-imm_N_at_Len[,,,,t]
-  temp_mat_N<-mat_N_at_Len[,,,,t]
+  R_stochastic = F
+  simu_name = paste0("Clim_scen_",clim_sc,"-Nat_morta_",morta_model)
   
-  
-  #==========================
-  #== INIT FOR EACH YEAR ====
-  #==========================
-  # The environmental covariates are defined at yearly time step,
-  # so at the moment we parameter life history traits at a yearly 
-  # scale
-  if(january_month[t] == T){
+  #==indices: lat,lon,sex,size,time
+  for(t in 1:(length(proj_period)-1))
+    # for(t in 1:(length(proj_period)-1))
+  {
     
-    source("4_full_MSE/source/projection/year_init.r")
+    print(paste0(simu_name," | ",t))
+    #==create a 'working' array for a given time step of both mature and immature critters
+    temp_imm_N<-imm_N_at_Len[,,,,t]
+    temp_mat_N<-mat_N_at_Len[,,,,t]
     
-  }
-  
-  if(print_distrib){plot(temp_mat_N[,,2,5],main="FIRST")}
-  
-  ## Follow up chunk
-  if(follow_ab){
     
-    for(size in 1:length(sizes)){
+    #==========================
+    #== INIT FOR EACH YEAR ====
+    #==========================
+    # The environmental covariates are defined at yearly time step,
+    # so at the moment we parameter life history traits at a yearly 
+    # scale
+    if(january_month[t] == T){
       
-      follow_ab_df[follow_ab_iter,"phase"] = "init"
-      follow_ab_df[follow_ab_iter,"size"] = size
-      follow_ab_df[follow_ab_iter,"ab_male_imm"] = sum(temp_imm_N[,,2,size])
-      follow_ab_df[follow_ab_iter,"ab_male_mat"] = sum(temp_mat_N[,,2,size])
-      follow_ab_df[follow_ab_iter,"t"] = t
-      follow_ab_df[follow_ab_iter,"iter"] = follow_ab_iter
-      follow_ab_iter=follow_ab_iter+1
+      source("4_full_MSE/source/projection/year_init.r")
       
     }
     
-  }
-  
-  
-  #==========================
-  #== FISHERY OCCURS ========
-  #==========================
-  if(fish_time[t]==1 & sum(quota) > 0)
-  {
-    for(f in 1:fishers)
+    if(print_distrib){plot(temp_mat_N[,,2,5],main="FIRST")}
+    
+    ## Follow up chunk (only male at the moment)
+    follow_res = follow_ab_f(follow_ab_df,
+                             simu_name,
+                             phase = "init",
+                             ab_imm_matrix = temp_imm_N[,,2,],
+                             ab_mat_matrix = temp_mat_N[,,2,],
+                             follow_ab_iter = follow_ab_iter,
+                             t = t,
+                             follow_ab = follow_ab)
+    follow_ab_df = follow_res[[1]]
+    follow_ab_iter = follow_res[[2]]
+    
+    #==========================
+    #== FISHERY OCCURS ========
+    #==========================
+    if(fish_time[t]==1 & sum(quota) > 0)
+    {
+      for(f in 1:fishers)
+      {
+        
+        source("4_full_MSE/source/projection/fishery.r")
+        
+      }
+      
+      if(print_distrib){plot(temp_mat_N[,,2,5],main="FISHERY OCCURED")}
+      
+      ## Follow up chunk (only male at the moment)
+      follow_res = follow_ab_f(follow_ab_df,
+                               simu_name,
+                               phase = "post fishery",
+                               ab_imm_matrix = temp_imm_N[,,2,],
+                               ab_mat_matrix = temp_mat_N[,,2,],
+                               follow_ab_iter = follow_ab_iter,
+                               t = t,
+                               follow_ab = follow_ab)
+      follow_ab_df = follow_res[[1]]
+      follow_ab_iter = follow_res[[2]]
+
+    }
+    
+    
+    
+    #==========================
+    #== GROWTH OCCURS =========
+    #==========================
+    if( molt_time[1,t]==1 | molt_time[2,t]==1 )
     {
       
-      source("4_full_MSE/source/projection/fishery.r")
+      source("4_full_MSE/source/projection/growth.r")
+      if(print_distrib){plot(temp_mat_N[,,2,5],main="GROWTH OCCURED")}
       
     }
     
-    if(print_distrib){plot(temp_mat_N[,,2,5],main="FISHERY OCCURED")}
     
-    ## Follow up chunk
-    if(follow_ab){
+    #==========================
+    #== MOVEMENT OCCURS =======
+    #==========================
+    if(move_time[t]==1)
+    {
       
-      for(size in 1:length(sizes)){
-        
-        follow_ab_df[follow_ab_iter,"phase"] = "post fishery"
-        follow_ab_df[follow_ab_iter,"size"] = size
-        follow_ab_df[follow_ab_iter,"ab_male_imm"] = sum(temp_imm_N[,,2,size])
-        follow_ab_df[follow_ab_iter,"ab_male_mat"] = sum(temp_mat_N[,,2,size])
-        follow_ab_df[follow_ab_iter,"t"] = t
-        follow_ab_df[follow_ab_iter,"iter"] = follow_ab_iter
-        follow_ab_iter=follow_ab_iter+1
-        
-      }
+      source("4_full_MSE/source/projection/movement.r")
       
-    }
-    
-  }
-  
-  
-  
-  #==========================
-  #== GROWTH OCCURS =========
-  #==========================
-  if( molt_time[1,t]==1 | molt_time[2,t]==1 )
-  {
-    
-    source("4_full_MSE/source/projection/growth.r")
-    if(print_distrib){plot(temp_mat_N[,,2,5],main="GROWTH OCCURED")}
-    
-  }
-  
-  
-  #==========================
-  #== MOVEMENT OCCURS =======
-  #==========================
-  if(move_time[t]==1)
-  {
-    
-    source("4_full_MSE/source/projection/movement.r")
-    
-    ## Follow up chunk
-    if(follow_ab){
-      
-      for(size in 1:length(sizes)){
-        
-        follow_ab_df[follow_ab_iter,"phase"] = "post monthly movement"
-        follow_ab_df[follow_ab_iter,"size"] = size
-        follow_ab_df[follow_ab_iter,"ab_male_imm"] = sum(temp_imm_N[,,2,size])
-        follow_ab_df[follow_ab_iter,"ab_male_mat"] = sum(temp_mat_N[,,2,size])
-        follow_ab_df[follow_ab_iter,"t"] = t
-        follow_ab_df[follow_ab_iter,"iter"] = follow_ab_iter
-        follow_ab_iter=follow_ab_iter+1
-        
-      }
-      
-    }
-    
-  }
-  
-  #==========================
-  #== SPAWNING OCCURS =======
-  #==========================      
-  #==this makes a map of spawning biomass to be used with transition matrices for recruitment
-  if(mate_time[t]==1 )
-  {
-    #==aggregate spawning biomass
-    #==just count female biomass?
-    #==include sperm reserves?
-    #==include biennial spawning?
-    
-    #==THIS IS JUST NUMBERS RIGHT NOW...
-    spbiom<-apply(temp_mat_N[,,1,],c(1,2),sum,na.rm=T)
-    plot_spb<-spbiom
-    plot_spb[plot_spb==0]<-NA
-    # filled.contour(x=lon,y=rev(lat),g(plot_spb),plot.axes=map(add=TRUE,fill=T,col='grey') )
-  }
-  
-  
-  #==========================
-  #== RECRUITMENT OCCURS ====
-  #========================== 
-  #==how do we determine which bins they drop into?
-  #==will temperature determine the size they reach in the time before they settle?
-  if(recruit_time[t]==1)
-  {
-    
-    source("4_full_MSE/source/projection/recruitment.r")
-    
-    if(print_distrib){plot(temp_mat_N[,,2,5],main="RECRUIT OCCURED")}
-    
-    ## Follow up chunk
-    if(follow_ab){
-      
-      for(size in 1:length(sizes)){
-        
-        follow_ab_df[follow_ab_iter,"phase"] = "post recruitment"
-        follow_ab_df[follow_ab_iter,"size"] = size
-        follow_ab_df[follow_ab_iter,"ab_male_imm"] = sum(temp_imm_N[,,2,size])
-        follow_ab_df[follow_ab_iter,"ab_male_mat"] = sum(temp_mat_N[,,2,size])
-        follow_ab_df[follow_ab_iter,"t"] = t
-        follow_ab_df[follow_ab_iter,"iter"] = follow_ab_iter
-        follow_ab_iter=follow_ab_iter+1
-        
-      }
-      
-    }
-    
-  }
-  
-  
-  #==========================
-  #== Natural mortality =====
-  #==========================
-  source("4_full_MSE/source/projection/mortality.R")
+      ## Follow up chunk (only male at the moment)
+      follow_res = follow_ab_f(follow_ab_df,
+                               simu_name,
+                               phase = "post monthly movement",
+                               ab_imm_matrix = temp_imm_N[,,2,],
+                               ab_mat_matrix = temp_mat_N[,,2,],
+                               follow_ab_iter = follow_ab_iter,
+                               t = t,
+                               follow_ab = follow_ab)
+      follow_ab_df = follow_res[[1]]
+      follow_ab_iter = follow_res[[2]]
 
-  ## Follow up chunk
-  if(follow_ab){
+    }
     
-    for(size in 1:length(sizes)){
+    #==========================
+    #== SPAWNING OCCURS =======
+    #==========================      
+    #==this makes a map of spawning biomass to be used with transition matrices for recruitment
+    if(mate_time[t]==1 )
+    {
+      #==aggregate spawning biomass
+      #==just count female biomass?
+      #==include sperm reserves?
+      #==include biennial spawning?
       
-      follow_ab_df[follow_ab_iter,"phase"] = "post natural mortality"
-      follow_ab_df[follow_ab_iter,"size"] = size
-      follow_ab_df[follow_ab_iter,"ab_male_imm"] = sum(imm_N_at_Len[,,2,size,t+1],na.rm=T)
-      follow_ab_df[follow_ab_iter,"ab_male_mat"] = sum(mat_N_at_Len[,,2,size,t+1],na.rm=T)
-      follow_ab_df[follow_ab_iter,"t"] = t
-      follow_ab_df[follow_ab_iter,"iter"] = follow_ab_iter
-      follow_ab_iter=follow_ab_iter+1
+      #==THIS IS JUST NUMBERS RIGHT NOW...
+      spbiom<-apply(temp_mat_N[,,1,],c(1,2),sum,na.rm=T)
+      plot_spb<-spbiom
+      plot_spb[plot_spb==0]<-NA
+      # filled.contour(x=lon,y=rev(lat),g(plot_spb),plot.axes=map(add=TRUE,fill=T,col='grey') )
+    }
+    
+    
+    #==========================
+    #== RECRUITMENT OCCURS ====
+    #========================== 
+    #==how do we determine which bins they drop into?
+    #==will temperature determine the size they reach in the time before they settle?
+    if(recruit_time[t]==1)
+    {
+      
+      source("4_full_MSE/source/projection/recruitment.r")
+      
+      if(print_distrib){plot(temp_mat_N[,,2,5],main="RECRUIT OCCURED")}
+      
+      ## Follow up chunk (only male at the moment)
+      follow_res = follow_ab_f(follow_ab_df,
+                               simu_name,
+                               phase = "post recruitment",
+                               ab_imm_matrix = temp_imm_N[,,2,],
+                               ab_mat_matrix = temp_mat_N[,,2,],
+                               follow_ab_iter = follow_ab_iter,
+                               t = t,
+                               follow_ab = follow_ab)
+      follow_ab_df = follow_res[[1]]
+      follow_ab_iter = follow_res[[2]]
+
+    }
+    
+    
+    #==========================
+    #== Natural mortality =====
+    #==========================
+    source("4_full_MSE/source/projection/mortality.R")
+    
+    ## Follow up chunk (only male at the moment)
+    follow_res = follow_ab_f(follow_ab_df,
+                             simu_name,
+                             phase = "post natural mortality",
+                             ab_imm_matrix = imm_N_at_Len[,,2,,t+1],
+                             ab_mat_matrix = mat_N_at_Len[,,2,,t+1],
+                             follow_ab_iter = follow_ab_iter,
+                             t = t,
+                             follow_ab = follow_ab)
+    follow_ab_df = follow_res[[1]]
+    follow_ab_iter = follow_res[[2]]
+    
+    
+    #==generate scientific (1 sample per cell grid - could be something else)
+    if(survey_time[t] == 1){
+      
+      source("4_full_MSE/source/projection/sample_scientific.r")
+      
+    }
+    
+    
+    #========================== 
+    #==Stock assessment
+    #========================== 
+    # "spatialIPM": spatially-explicit model IPM
+    # "nonspatialIPM": non spatial model IPM
+    # "GMACS": standard stock assessment model
+    # "none": no feedback loop
+    if(SA_time[t] == 1){
+      
+      source("4_full_MSE/source/projection/make_commercial.r")
+      
+      source("4_full_MSE/source/projection/stock_assessment.r")
+      
+      source("4_full_MSE/source/projection/hcr.r")
       
     }
     
   }
   
-  
-  #==generate scientific (1 sample per cell grid - could be something else)
-  if(survey_time[t] == 1){
-    
-    source("4_full_MSE/source/projection/sample_scientific.r")
-    
-  }
-  
-  
-  #========================== 
-  #==Stock assessment
-  #========================== 
-  # "spatialIPM": spatially-explicit model IPM
-  # "nonspatialIPM": non spatial model IPM
-  # "GMACS": standard stock assessment model
-  # "none": no feedback loop
-  if(SA_time[t] == 1){
-    
-    source("4_full_MSE/source/projection/make_commercial.r")
-    
-    source("4_full_MSE/source/projection/stock_assessment.r")
-    
-    source("4_full_MSE/source/projection/hcr.r")
-    
-  }
-  
+  ## Save runs
+  source("4_full_MSE/source/projection/save.r")
 }
 
 ## Plot results
 # source("4_full_MSE/source/projection/plot.r")
 
-## Save codes

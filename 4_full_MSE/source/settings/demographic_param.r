@@ -33,7 +33,7 @@ mat_fem_M = 0.26
 mat_male_M = 0.28
 morta_sd_imm = 0.1
 morta_sd_mat = 0.1
-morta_model = "cody_model" # "cody_model", "max_model", "coldpool"
+morta_model = "coldpool" # "cody_model", "max_model", "coldpool"
 if(morta_model == "max_model"){
   
   #==Maxime's morta parameterization
@@ -149,7 +149,7 @@ if(size_class_settings == "fine"){
 
 R_stochastic = T # Whether the recruitment is stochastic or not
 
-## Parameter of 
+## Parameter of recruitment distribution probability
 recruit_female = unlist(Snow_Out$Recruitment$recruits[1,])
 meanlog_recruit_female = mean(log(recruit_female))
 sdlog_female = sd(log(recruit_female))
