@@ -68,6 +68,11 @@ plants = sf::st_read("4_full_MSE/data/ebs_crab_plants/ebs_crab_plants.shp") %>%
 
 the_d_plants = the_d %>% dplyr::select(stat_area, lat,lon) %>% expand_grid(plants)
 
+stat_area_df = the_d_plants %>% 
+  group_by(stat_area,lon,lat) %>% 
+  dplyr::slice(1) %>% 
+  dplyr::select(stat_area,lon,lat)
+
 library(geosphere)
 the_d_plants$port_dist = distHaversine(the_d_plants[, c('lon', 'lat')], the_d_plants[, c('Longitude', 'Latitude')])/1000
 
@@ -96,7 +101,7 @@ for(i in 1:nrow(month_i_df)){
     mean_sort$legal_prop_mean*parameters_fixed["Sort_par"]
   if (i>1){
    # time varying covariates for time steps after 1
-  area_util_ti = area_util_ti+ fishery_history$effort[i-1,]*parameters_fixed["Trad_par"]+
+  area_util_ti = area_util_ti + fishery_history$effort[i-1,]*parameters_fixed["Trad_par"]+
     fishery_history$cpue[i-1,]*parameters_fixed["CpueF_par"]+
     fishery_history$risk[i-1,]*parameters_fixed["CvF_par"]
   }
@@ -111,4 +116,15 @@ for(i in 1:nrow(month_i_df)){
   
 }
 
+stat_area_df$stat_area = as.character(stat_area_df$stat_area)
+
+effort_df = data.frame(stat_area = colnames(fishery_history$effort),
+                      effort = t(fishery_history$effort)) %>% 
+  inner_join(stat_area_df) %>% 
+  pivot_longer(effort.1:effort.6)
+
+ggplot(effort_df)+
+  geom_raster(aes(x=lon,y=lat,fill=value))+
+  scale_fill_distiller(palette = "Spectral")+
+  facet_wrap(.~name)
 

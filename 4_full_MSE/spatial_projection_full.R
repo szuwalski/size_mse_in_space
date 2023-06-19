@@ -77,14 +77,6 @@ for(clim_sc in c("rcp45","rcp85","ssp126","ssp585")){
     temp_imm_N<-imm_N_at_Len[,,,,t]
     temp_mat_N<-mat_N_at_Len[,,,,t]
     
-    x11()
-    par(mfrow = c(4,6))
-    for(i in 1:22){
-      
-      plot(mat_N_at_Len[,,2,i,t] * land_mask_na,
-           main = paste0("Age ",i),asp = 1)
-      
-    }
     
     #==========================
     #== INIT FOR EACH YEAR ====
@@ -117,6 +109,7 @@ for(clim_sc in c("rcp45","rcp85","ssp126","ssp585")){
     #==========================
     if(fish_time[t]==1 & sum(quota) > 0)
     {
+      
       for(f in 1:fishers)
       {
         
@@ -140,8 +133,7 @@ for(clim_sc in c("rcp45","rcp85","ssp126","ssp585")){
 
     }
     
-    
-    
+
     #==========================
     #== GROWTH OCCURS =========
     #==========================

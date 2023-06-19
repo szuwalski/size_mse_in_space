@@ -1,4 +1,5 @@
 
+# pars_LHP_setting = pars_Growth_setting_f_mat
 
 growth <- function(sizes,
                    binclass,
@@ -87,6 +88,8 @@ Growth_temp3 <- left_join(Growth_temp2, lat2,by = c("cell", "lat"))
 
 if(plot==TRUE){
   
+  
+  
   # Plot
   p <- ggplot(Growth_temp %>% filter(cell %in% c(seq(1,1000,100))), aes(Size_class_from, Size_class_to, fill= prob)) + 
     geom_tile()+scale_fill_viridis() + theme_bw()
@@ -98,13 +101,21 @@ if(plot==TRUE){
   #        height = 18,
   #        units = "cm")
   
-  p <- ggplot() +   geom_raster(Growth_temp2, mapping=aes(lon, lat, fill= prob))+
+  test = Growth_temp2$lon %>% 
+    filter(Size_class_from %in% 1:2 & Size_class_to %in% 3:5) %>% 
+    mutate()
+  
+  p <- ggplot() +   geom_raster(test, mapping=aes(lon, lat, fill= prob))+
     scale_fill_viridis() +  
-    theme_bw()+ 
-    geom_sf(data = world_sf,fill="black",color=NA)+ 
+    theme_classic()+ 
+    theme(axis.text.x = element_blank(),
+          axis.ticks = element_blank(),
+          axis.line = element_blank())+
+    xlab("")+ylab("")+
+    geom_sf(data = world_sf,fill="black",color=NA)+
     coord_sf(xlim=range(loc_x$lon), ylim=range((loc_x$lat)))
   
-  plot(p + facet_wrap(~Size_class_from + Size_class_to,nrow = n_p,ncol = n_p,))
+  plot(p + facet_grid(rows = vars(Size_class_from), cols =  vars(Size_class_to),switch="y"))
   
 }
 
