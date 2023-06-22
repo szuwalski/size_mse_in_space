@@ -43,7 +43,7 @@ source("4_full_MSE/source/settings/proj_to_fish.R")
 HCR = "cody"
 fmsy_proxy = 1
 bmsy_proxy = 183.1*1e9 / 1e3
-b_hcr = 2
+b_hcr = 1
 a_hcr = 0
 
 ## Matrices of abundance at size (initialization)

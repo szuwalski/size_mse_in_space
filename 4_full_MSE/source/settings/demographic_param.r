@@ -73,7 +73,7 @@ growth_param[7:dim(growth_param)[1],] <- growth_param[7:dim(growth_param)[1],] %
   dplyr::mutate(model = "molt prob")
 
 # Type of model (Cody's model --> non-spatial life-history parameters, Maxime's model --> spatially varying life-history parameters)
-growth_model <- "max_model" # "max_model" "cody_model"
+growth_model <- "cody_model" # "max_model" "cody_model"
 
 growth_param_est = growth_param[1:6,] %>% 
   dplyr::select(Estimate) %>% 
