@@ -147,7 +147,9 @@ if(size_class_settings == "fine"){
   prop_rec <-c(.25,.4,.25,.075,0.025)
 }
 
-R_stochastic = T # Whether the recruitment is stochastic or not
+# Whether the recruitment is stochastic or not
+R_stochastic = "pre-simulated" # "yes", "no", "pre-simulated"
+
 
 ## Parameter of recruitment distribution probability
 recruit_female = unlist(Snow_Out$Recruitment$recruits[1,])
@@ -173,6 +175,14 @@ if(recruit_model == "max_model"){
   
   ## Load function for recruitment
   source("4_full_MSE/source/settings/recruitment.R")
+  
+}
+
+## To have the same recruitment for all projection scenarios
+if(R_stochastic == "pre-simulated"){
+  
+  vec_rec_1 = rlnorm(n = year_n, mean = meanlog_recruit_female, sdlog = sdlog_female)
+  vec_rec_2 = rlnorm(n = year_n, mean = meanlog_recruit_male, sdlog = sdlog_male)
   
 }
 

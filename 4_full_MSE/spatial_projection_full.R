@@ -64,7 +64,7 @@ source("4_full_MSE/source/settings/stocking_and_debug.r")
 
 for(clim_sc in c("rcp45","rcp85","ssp126","ssp585")){
   
-  R_stochastic = F
+  R_stochastic = "pre-simulated"
   simu_name = paste0("Clim_scen_",clim_sc,"-Nat_morta_",morta_model)
   
   #==indices: lat,lon,sex,size,time
@@ -260,7 +260,7 @@ for(clim_sc in c("rcp45","rcp85","ssp126","ssp585")){
   }
   
   ## Save runs
-  source("4_full_MSE/source/projection/save.r")
+  # source("4_full_MSE/source/projection/save.r")
   
 }
 

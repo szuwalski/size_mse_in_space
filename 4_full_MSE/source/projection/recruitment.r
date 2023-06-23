@@ -16,15 +16,20 @@ if(recruit_model == "cody_model"){
   
 }
 
-if(R_stochastic){
+if(R_stochastic == "yes"){
   
   aggreg_rec_1 = rlnorm(n = 1, mean = meanlog_recruit_female_2, sdlog = sdlog_female)
   aggreg_rec_2 = rlnorm(n = 1, mean = meanlog_recruit_male_2, sdlog = sdlog_male)
   
-}else{
+}else if(R_stochastic == "no"){
   
   aggreg_rec_1 = exp(meanlog_recruit_female_2)
   aggreg_rec_2 = exp(meanlog_recruit_male_2)
+  
+}else if(R_stochastic == "pre-simulated"){
+  
+  aggreg_rec_1 = vec_rec_1[Years_climsc[t]-Start_Y+1]
+  aggreg_rec_2 = vec_rec_2[Years_climsc[t]-Start_Y+1]
   
 }
 
